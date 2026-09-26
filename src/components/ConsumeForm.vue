@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { BuyAgain, ConsumeInput, MaturityAssessment, Tasting } from '@/types/domain'
+import type { BuyAgain, ConsumeInput, MaturityAssessment, Tasting, Wine } from '@/types/domain'
 import { todayIso } from '@/utils/format'
+import WineServingGuide from './WineServingGuide.vue'
 
-const props = withDefaults(defineProps<{ saving?: boolean }>(), { saving: false })
+const props = withDefaults(defineProps<{ wine: Wine; saving?: boolean }>(), { saving: false })
 const emit = defineEmits<{ submit: [input: ConsumeInput] }>()
 const date = ref(todayIso())
 const rating = ref<Tasting['rating']>()
@@ -19,6 +20,7 @@ function save(): void {
 
 <template>
   <form class="form-stack" @submit.prevent="save">
+    <WineServingGuide :wine="wine" />
     <label class="field"><span>Datum</span><input v-model="date" type="date" required /></label>
     <fieldset class="choice-field"><legend>Betyg <small>valfritt</small></legend><div class="rating-row"><button v-for="score in 5" :key="score" type="button" :class="{ selected: rating === score }" :aria-label="`${score} av 5`" @click="rating = score as Tasting['rating']">{{ score }}</button></div></fieldset>
     <label class="field"><span>Kort omdöme <small>valfritt</small></span><textarea v-model="review" rows="3" placeholder="Vad tyckte du?" /></label>

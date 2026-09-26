@@ -1,6 +1,8 @@
 import { computed, readonly, ref } from 'vue'
 import { repositories } from '@/services/repository'
 import type { AppData, ConsumeInput, Inventory, InventoryInput, Wine } from '@/types/domain'
+import type { WineEnrichmentReport, WineEnrichmentService } from '@/types/search'
+import { enrichWineRecord } from '@/services/wineEnrichment'
 import { buildWineSummaries, calculateBottleCount, calculateCollectionValue } from '@/utils/wine'
 import { logDevelopmentError } from '@/utils/log'
 
@@ -94,6 +96,25 @@ export function useWineStore() {
     }, 'Ändringarna är sparade', 'Kunde inte spara vinet. Försök igen.')
   }
 
+  async function enrichWine(wineId: string, service: WineEnrichmentService): Promise<WineEnrichmentReport | undefined> {
+    operationError.value = ''
+    pendingAction.value = 'enrich-wine'
+    try {
+      const wine = data.value.wines.find((item) => item.id === wineId)
+      if (!wine) throw new Error('Wine not found')
+      const report = await enrichWineRecord(wine, service, (updated) => repositories.wines.updateWine(updated))
+      await fetchData()
+      if (report.completedFields.length) announce('Vinets metadata har kompletterats')
+      return report
+    } catch (error) {
+      logDevelopmentError('Wine enrichment failed', error)
+      operationError.value = 'Kunde inte komplettera vinets metadata.'
+      return undefined
+    } finally {
+      pendingAction.value = undefined
+    }
+  }
+
   async function addInventory(wineId: string, input: InventoryInput): Promise<boolean> {
     return mutate('add-inventory', async () => {
       await repositories.inventory.addInventory(wineId, input)
@@ -133,7 +154,7 @@ export function useWineStore() {
     data: readonly(data), loading: readonly(loading), initialized: readonly(initialized),
     loadError: readonly(loadError), operationError: readonly(operationError), pendingAction: readonly(pendingAction),
     isSaving, notice: readonly(notice), summaries, inStock, wishlist, bottleCount, collectionValue,
-    getWine, getInventory, getTastings, loadData, clearData, createWine, updateWine,
+    getWine, getInventory, getTastings, loadData, clearData, createWine, updateWine, enrichWine,
     addInventory, correctInventory, consumeBottle, addToWishlist, removeFromWishlist,
   }
 }

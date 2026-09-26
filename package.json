@@ -8,6 +8,8 @@
     "build": "vue-tsc -b && vite build",
     "collection:dry-run": "node scripts/import-real-collection.mjs",
     "collection:import": "CONFIRM_COLLECTION_RESET=DELETE_AND_IMPORT_19_WINES node scripts/import-real-collection.mjs --apply",
+    "metadata:audit": "node scripts/enrich-missing-wines.mjs",
+    "metadata:enrich": "CONFIRM_METADATA_ENRICHMENT=ENRICH_MISSING_WINE_METADATA node scripts/enrich-missing-wines.mjs --apply",
     "preview": "vite preview",
     "type-check": "vue-tsc -b",
     "test": "vitest run",

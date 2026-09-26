@@ -73,6 +73,11 @@ databasmigration eller frontend-API-nyckel har lagts till. Utredning och den
 föreslagna, ej körda barcode-migrationen finns i
 [`docs/smart-add-research.md`](docs/smart-add-research.md).
 
+Wine-metadata kan kompletteras i efterhand utan att skriva över befintliga värden.
+Det säkra Edge Function-upplägget och det förberedda batchflödet beskrivs i
+[`docs/wine-enrichment.md`](docs/wine-enrichment.md). Ingen extern AI-provider är
+aktiverad.
+
 ## Scripts
 
 ```bash

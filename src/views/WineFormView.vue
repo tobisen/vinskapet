@@ -20,6 +20,8 @@ const form = reactive({
   producer: existing.value?.producer ?? '', name: existing.value?.name ?? (typeof route.query.name === 'string' ? route.query.name : ''), vintage: existing.value?.vintage,
   wineType: existing.value?.wineType ?? 'RED' as WineType, country: existing.value?.country ?? '', region: existing.value?.region ?? '',
   appellation: existing.value?.appellation ?? '', grapes: existing.value?.grapes.join(', ') ?? '', referencePrice: existing.value?.referencePrice,
+  storagePotential: existing.value?.storagePotential, servingTemperatureMin: existing.value?.servingTemperatureMin,
+  servingTemperatureMax: existing.value?.servingTemperatureMax, foodPairings: existing.value?.foodPairings.join(', ') ?? '',
   drinkingWindowStart: existing.value?.drinkingWindowStart, drinkingWindowEnd: existing.value?.drinkingWindowEnd,
   optimalDrinkingStart: existing.value?.optimalDrinkingStart, optimalDrinkingEnd: existing.value?.optimalDrinkingEnd,
   description: existing.value?.description ?? '', notes: existing.value?.notes ?? '',
@@ -30,10 +32,12 @@ function buildWine(): Wine {
     id: existing.value?.id ?? crypto.randomUUID(), producer: form.producer.trim(), name: form.name.trim(), vintage: form.vintage,
     wineType: form.wineType, country: form.country.trim() || undefined, region: form.region.trim() || undefined,
     appellation: form.appellation.trim() || undefined, grapes: form.grapes.split(',').map((item) => item.trim()).filter(Boolean),
-    referencePrice: form.referencePrice, currency: 'SEK', storagePotential: existing.value?.storagePotential,
+    referencePrice: form.referencePrice, currency: 'SEK', storagePotential: form.storagePotential,
     drinkingWindowStart: form.drinkingWindowStart, drinkingWindowEnd: form.drinkingWindowEnd,
     optimalDrinkingStart: form.optimalDrinkingStart, optimalDrinkingEnd: form.optimalDrinkingEnd,
-    foodPairings: existing.value?.foodPairings ?? [], description: form.description.trim() || undefined, notes: form.notes.trim() || undefined,
+    servingTemperatureMin: form.servingTemperatureMin, servingTemperatureMax: form.servingTemperatureMax,
+    foodPairings: form.foodPairings.split(',').map((item) => item.trim()).filter(Boolean),
+    description: form.description.trim() || undefined, notes: form.notes.trim() || undefined,
     status: status.value, createdAt: existing.value?.createdAt ?? now, updatedAt: now,
   }
 }
@@ -80,8 +84,11 @@ function continueNew(): void {
             <div class="field-row"><label class="field"><span>Land</span><input v-model="form.country" placeholder="Italien" /></label><label class="field"><span>Region</span><input v-model="form.region" placeholder="Piemonte" /></label></div>
             <label class="field"><span>Appellation</span><input v-model="form.appellation" /></label>
             <label class="field"><span>Druvor</span><input v-model="form.grapes" placeholder="Nebbiolo, Barbera" /><small>Separera flera druvor med komma.</small></label>
+            <label class="field"><span>Lagringspotential</span><select v-model="form.storagePotential"><option :value="undefined">Ej angivet</option><option value="LOW">Kort</option><option value="MEDIUM">Medel</option><option value="HIGH">Lång</option></select></label>
             <div class="field-row"><label class="field"><span>Drick från</span><input v-model.number="form.drinkingWindowStart" type="number" min="2000" max="2200" /></label><label class="field"><span>Drick senast</span><input v-model.number="form.drinkingWindowEnd" type="number" min="2000" max="2200" /></label></div>
             <div class="field-row"><label class="field"><span>Optimalt från</span><input v-model.number="form.optimalDrinkingStart" type="number" min="2000" max="2200" /></label><label class="field"><span>Optimalt till</span><input v-model.number="form.optimalDrinkingEnd" type="number" min="2000" max="2200" /></label></div>
+            <div class="field-row"><label class="field"><span>Servering min °C</span><input v-model.number="form.servingTemperatureMin" type="number" min="4" max="24" /></label><label class="field"><span>Servering max °C</span><input v-model.number="form.servingTemperatureMax" type="number" min="4" max="24" /></label></div>
+            <label class="field"><span>Passar till</span><input v-model="form.foodPairings" placeholder="Nötkött, svamp, lagrad ost" /><small>Separera flera förslag med komma.</small></label>
             <label class="field"><span>Referenspris</span><div class="input-suffix"><input v-model.number="form.referencePrice" type="number" min="0" /><span>kr</span></div></label>
             <label class="field"><span>Beskrivning</span><textarea v-model="form.description" rows="3" /></label>
             <label class="field"><span>Egna anteckningar</span><textarea v-model="form.notes" rows="2" /></label>

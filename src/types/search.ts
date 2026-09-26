@@ -31,6 +31,7 @@ export interface WineSearchProvider {
 export type WineCandidate = Omit<WineSearchResult, 'existingWine' | 'quantity'>
 
 export interface WineEnrichment {
+  grapes?: string[]
   storagePotential?: Wine['storagePotential']
   drinkingWindowStart?: number
   drinkingWindowEnd?: number
@@ -44,6 +45,16 @@ export interface WineEnrichment {
 
 export interface WineEnrichmentService {
   enrich(wine: WineCandidate): Promise<WineEnrichment>
+}
+
+export type WineEnrichmentField = keyof WineEnrichment
+
+export interface WineEnrichmentReport {
+  wineId: string
+  wineName: string
+  missingBefore: WineEnrichmentField[]
+  completedFields: WineEnrichmentField[]
+  missingAfter: WineEnrichmentField[]
 }
 
 export interface WineLabelRecognitionService {
