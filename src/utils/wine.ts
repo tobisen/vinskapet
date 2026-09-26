@@ -61,6 +61,17 @@ export function getStorageRecommendation(wine: Wine, currentDate = new Date()): 
   return 'Lagring rekommenderas'
 }
 
+export function calculateDrinkingPlan(wines: WineSummary[], currentDate = new Date()) {
+  const counts = { ready: 0, soon: 0, waiting: 0 }
+  for (const wine of wines) {
+    const status = getDrinkingStatus(wine, currentDate)
+    if (status === 'CAN_DRINK' || status === 'OPTIMAL') counts.ready += wine.quantity
+    if (status === 'DRINK_SOON' || status === 'PAST_WINDOW') counts.soon += wine.quantity
+    if (status === 'WAIT') counts.waiting += wine.quantity
+  }
+  return counts
+}
+
 export const calculateBottleCount = (inventory: Inventory[]): number =>
   inventory.reduce((total, item) => total + Math.max(0, item.quantity), 0)
 

@@ -4,20 +4,11 @@ import { ArrowRight, CircleDollarSign, Clock3, GlassWater, LibraryBig, Plus, Spa
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { formatCurrency } from '@/utils/format'
-import { getDrinkingStatus, sortWines } from '@/utils/wine'
+import { calculateDrinkingPlan, getDrinkingStatus, sortWines } from '@/utils/wine'
 
 const store = useWineStore()
 
-const statusCounts = computed(() => {
-  const counts = { optimal: 0, soon: 0, waiting: 0 }
-  for (const wine of store.inStock.value) {
-    const status = getDrinkingStatus(wine)
-    if (status === 'OPTIMAL') counts.optimal += wine.quantity
-    if (status === 'DRINK_SOON' || status === 'PAST_WINDOW') counts.soon += wine.quantity
-    if (status === 'WAIT') counts.waiting += wine.quantity
-  }
-  return counts
-})
+const statusCounts = computed(() => calculateDrinkingPlan(store.inStock.value))
 
 const drinkNow = computed(() =>
   sortWines(
@@ -51,7 +42,7 @@ const drinkNow = computed(() =>
     <section class="home-section">
       <div class="section-heading"><div><p class="eyebrow">Drickplan</p><h2>Just nu</h2></div><RouterLink class="text-link" to="/cellar">Öppna källaren <ArrowRight :size="16" aria-hidden="true" /></RouterLink></div>
       <div class="home-status-grid">
-        <RouterLink to="/cellar"><span class="status-symbol status-symbol--optimal" aria-hidden="true" /><strong>{{ statusCounts.optimal }}</strong><span>optimala nu</span></RouterLink>
+        <RouterLink to="/cellar"><span class="status-symbol status-symbol--optimal" aria-hidden="true" /><strong>{{ statusCounts.ready }}</strong><span>kan drickas nu</span></RouterLink>
         <RouterLink to="/cellar"><Clock3 :size="19" aria-hidden="true" /><strong>{{ statusCounts.soon }}</strong><span>drick snart</span></RouterLink>
         <RouterLink to="/cellar"><span class="status-symbol status-symbol--wait" aria-hidden="true" /><strong>{{ statusCounts.waiting }}</strong><span>bör vänta</span></RouterLink>
       </div>

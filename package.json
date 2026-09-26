@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "collection:dry-run": "node scripts/import-real-collection.mjs",
+    "collection:import": "CONFIRM_COLLECTION_RESET=DELETE_AND_IMPORT_19_WINES node scripts/import-real-collection.mjs --apply",
     "preview": "vite preview",
     "type-check": "vue-tsc -b",
     "test": "vitest run",
@@ -25,6 +27,7 @@
     "vite": "^7.1.7",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.11",
-    "vue-tsc": "^3.0.8"
+    "vue-tsc": "^3.0.8",
+    "ws": "^8.22.0"
   }
 }

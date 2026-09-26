@@ -3,6 +3,7 @@ import { seedInventory, seedTastings, seedWines } from '@/data/seed'
 import type { Inventory, WineFilters } from '@/types/domain'
 import {
   buildWineSummaries,
+  calculateDrinkingPlan,
   calculateAverageRating,
   calculateBottleCount,
   calculateCollectionValue,
@@ -48,6 +49,12 @@ describe('collection calculations', () => {
 
   it('calculates rating while ignoring unrated tastings', () => {
     expect(calculateAverageRating([{ id: '1', wineId: 'a', date: '2025-01-01', rating: 3 }, { id: '2', wineId: 'a', date: '2025-02-01' }, { id: '3', wineId: 'a', date: '2025-03-01', rating: 5 }])).toBe(4)
+  })
+
+  it('counts every in-stock bottle once in the drinking plan', () => {
+    const inStock = summaries.filter((wine) => wine.quantity > 0)
+    const plan = calculateDrinkingPlan(inStock, new Date('2026-06-01'))
+    expect(plan.ready + plan.soon + plan.waiting).toBe(inStock.reduce((sum, wine) => sum + wine.quantity, 0))
   })
 
   it('sums multiple purchase rows for the same wine', () => {
