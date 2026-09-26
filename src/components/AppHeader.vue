@@ -4,7 +4,7 @@ import { Plus } from '@lucide/vue'
 
 <template>
   <header class="app-header">
-    <RouterLink to="/collection" class="brand" aria-label="Vinskåpet, startsida">
+    <RouterLink to="/" class="brand" aria-label="Vinskåpet, startsida">
       <span class="brand-mark" aria-hidden="true">V</span>
       <span>Vinskåpet</span>
     </RouterLink>
