@@ -54,6 +54,25 @@ npm run build
 npm run preview
 ```
 
+## Smart lägg till
+
+Det globala `+`-flödet erbjuder streckkodsscanning, lokal vinsökning och ett
+förenklat manuellt formulär. Scannern använder kameran först när användaren
+öppnar scannervyn och läser EAN-8/EAN-13 lokalt i webbläsaren med
+`@zxing/browser`. Kamera kräver HTTPS i produktion; `localhost` räknas som en
+säker kontext under utveckling.
+
+Sökningen omfattar den inloggade användarens redan laddade Supabase-samling och
+matchar bland annat producent, namn, årgång, druva och Systembolagets
+artikelnummer. En identifierad dubblett får en ny inventory-post i stället för
+en ny wine-post.
+
+Systembolaget-sökning, barcode-persistens, etikettigenkänning och AI enrichment
+är endast förberedda som gränssnitt. Ingen scraping, extern produktintegration,
+databasmigration eller frontend-API-nyckel har lagts till. Utredning och den
+föreslagna, ej körda barcode-migrationen finns i
+[`docs/smart-add-research.md`](docs/smart-add-research.md).
+
 ## Scripts
 
 ```bash

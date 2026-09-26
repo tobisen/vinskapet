@@ -1,0 +1,82 @@
+# Smart add: external data and barcode persistence
+
+Research date: 2026-09-26.
+
+## Systembolaget product data
+
+No Systembolaget product integration is enabled in this iteration.
+
+| Option | Status | Cost/auth | Browser/CORS | Barcode | Assessment |
+| --- | --- | --- | --- | --- | --- |
+| Systembolaget API portal | Official portal exists, but no documented public product API was verified | Account/key may be required | Unknown until access is granted; a backend is recommended | Not verified | Contact Systembolaget and request documented product-data access before implementation |
+| Systembolaget web/e-commerce endpoints | Undocumented internal API used by their own site | Internal subscription key | Not a supported frontend contract; CORS and keys may change | No verified EAN field | Do not use |
+| `C4illin/systembolaget-data` | Unofficial, self-hostable mirror/workaround | Open source; hosting/storage cost | Backend or a large local dataset is required | Not documented | Technically possible, but provenance, terms and long-term stability require approval |
+| `AlexGustafsson/systembolaget-api` | Unofficial client for open and closed endpoints | Self-hosted client | Backend required | Not documented | Useful for research, not a production contract |
+| Open Food Facts API | Official open-data API for its community dataset, not a Systembolaget source | Free; identify the app with `User-Agent` | Public read API; a backend is still preferable for policy/rate control | Yes, direct GTIN lookup and community images | Viable secondary barcode fallback, but wine coverage and metadata quality are not guaranteed |
+| GS1 Sweden / Validoo | Official GS1 product and image data | Customer account and OAuth token; commercial terms apply | Secret-bearing integration requires backend | Yes, verified GTIN; product/image depth depends on service | Strong barcode authority, but does not provide Systembolaget price or assortment identity |
+
+Systembolaget's current user terms explicitly prohibit agents, robots, crawlers and
+similar automated tools used to collect information from the website or app for
+services about alcoholic products. The app must therefore not scrape the site or
+call its undocumented e-commerce endpoint.
+
+Sources:
+
+- https://www.systembolaget.se/allmanna-anvandarvillkor/
+- https://api-portal.systembolaget.se/
+- https://github.com/C4illin/systembolaget-data
+- https://github.com/AlexGustafsson/systembolaget-api
+- https://github.com/openfoodfacts/openfoodfacts-server/blob/main/docs/api/index.md
+- https://developer.gs1.se/api-implementation
+- https://productsearch.gs1.se/
+
+The undocumented Systembolaget endpoint and unofficial mirrors expose useful fields
+such as product names, producer, vintage, origin, alcohol, article/product numbers,
+price and sometimes images. No reviewed source demonstrated a reliable EAN field.
+Systembolaget also warns that vintage information may be wrong around vintage changes,
+so an eventual provider must always ask the user to confirm vintage. CORS behavior of
+undocumented endpoints is not a stable contract, and all authenticated/commercial
+providers must be called through a backend or Supabase Edge Function.
+
+## Proposed barcode migration (not applied)
+
+The current schema has no barcode column or relation. A separate relation avoids
+treating EAN as a wine/vintage identity and allows multiple codes per wine.
+
+```sql
+create table public.wine_barcodes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  wine_id uuid not null references public.wines(id) on delete cascade,
+  barcode text not null check (barcode ~ '^(\\d{8}|\\d{13})$'),
+  source text not null default 'USER_CONFIRMED',
+  created_at timestamptz not null default now(),
+  unique (user_id, wine_id, barcode)
+);
+
+create index wine_barcodes_user_barcode_idx
+  on public.wine_barcodes (user_id, barcode);
+
+alter table public.wine_barcodes enable row level security;
+
+create policy "Users can read own wine barcodes"
+  on public.wine_barcodes for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own wine barcodes"
+  on public.wine_barcodes for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.wines
+      where wines.id = wine_id and wines.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete own wine barcodes"
+  on public.wine_barcodes for delete
+  using (auth.uid() = user_id);
+```
+
+This migration is only a proposal. It has not been executed and the app does not
+pretend to remember scanned barcodes until it is approved.

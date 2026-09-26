@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CellarView from '@/views/CellarView.vue'
+import AddWineView from '@/views/AddWineView.vue'
 import CollectionView from '@/views/CollectionView.vue'
 import HistoryView from '@/views/HistoryView.vue'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import WineDetailView from '@/views/WineDetailView.vue'
 import WineFormView from '@/views/WineFormView.vue'
+import WineSearchView from '@/views/WineSearchView.vue'
 import WishlistView from '@/views/WishlistView.vue'
 import { initializeAuth, useAuth } from '@/composables/useAuth'
 
@@ -19,7 +21,10 @@ export const router = createRouter({
     { path: '/cellar', component: CellarView, meta: { requiresAuth: true } },
     { path: '/wishlist', component: WishlistView, meta: { requiresAuth: true } },
     { path: '/history', component: HistoryView, meta: { requiresAuth: true } },
-    { path: '/wine/new', component: WineFormView, meta: { requiresAuth: true } },
+    { path: '/wine/new', component: AddWineView, meta: { requiresAuth: true } },
+    { path: '/wine/scan', component: () => import('@/views/BarcodeScannerView.vue'), meta: { requiresAuth: true, immersive: true } },
+    { path: '/wine/search', component: WineSearchView, meta: { requiresAuth: true } },
+    { path: '/wine/manual', component: WineFormView, meta: { requiresAuth: true } },
     { path: '/wine/:id', component: WineDetailView, meta: { requiresAuth: true } },
     { path: '/wine/:id/edit', component: WineFormView, meta: { requiresAuth: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
