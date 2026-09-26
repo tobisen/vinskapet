@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { BuyAgain, ConsumeInput, MaturityAssessment, Tasting } from '@/types/domain'
 import { todayIso } from '@/utils/format'
 
+const props = withDefaults(defineProps<{ saving?: boolean }>(), { saving: false })
 const emit = defineEmits<{ submit: [input: ConsumeInput] }>()
 const date = ref(todayIso())
 const rating = ref<Tasting['rating']>()
@@ -11,6 +12,7 @@ const maturityAssessment = ref<MaturityAssessment>()
 const buyAgain = ref<BuyAgain>()
 
 function save(): void {
+  if (props.saving) return
   emit('submit', { date: date.value, rating: rating.value, review: review.value, maturityAssessment: maturityAssessment.value, buyAgain: buyAgain.value })
 }
 </script>
@@ -23,6 +25,6 @@ function save(): void {
     <label class="field"><span>Mognad <small>valfritt</small></span><select v-model="maturityAssessment"><option :value="undefined">Välj mognad</option><option value="TOO_YOUNG">För ung</option><option value="GOOD_NOW">Bra nu</option><option value="PERFECT">Perfekt</option><option value="DECLINING">På väg utför</option></select></label>
     <fieldset class="choice-field"><legend>Köp igen? <small>valfritt</small></legend><div class="segmented"><button type="button" :class="{ selected: buyAgain === 'YES' }" @click="buyAgain = 'YES'">Ja</button><button type="button" :class="{ selected: buyAgain === 'MAYBE' }" @click="buyAgain = 'MAYBE'">Kanske</button><button type="button" :class="{ selected: buyAgain === 'NO' }" @click="buyAgain = 'NO'">Nej</button></div></fieldset>
     <p class="form-hint">Betyg och omdöme kan hoppas över.</p>
-    <button class="button button-primary button-block" type="submit">Registrera som drucken</button>
+    <button class="button button-primary button-block" type="submit" :disabled="props.saving">{{ props.saving ? 'Sparar…' : 'Registrera som drucken' }}</button>
   </form>
 </template>

@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router'
 import InventoryForm from '@/components/InventoryForm.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import type { InventoryInput, Wine, WineStatus, WineType } from '@/types/domain'
-import { createId } from '@/utils/id'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,7 +25,7 @@ const form = reactive({
 
 function buildWine(): Wine {
   return {
-    id: existing.value?.id ?? createId('wine'), producer: form.producer.trim(), name: form.name.trim(), vintage: form.vintage,
+    id: existing.value?.id ?? crypto.randomUUID(), producer: form.producer.trim(), name: form.name.trim(), vintage: form.vintage,
     wineType: form.wineType, country: form.country.trim() || undefined, region: form.region.trim() || undefined,
     appellation: form.appellation.trim() || undefined, grapes: form.grapes.split(',').map((item) => item.trim()).filter(Boolean),
     referencePrice: form.referencePrice, currency: 'SEK', storagePotential: existing.value?.storagePotential,
@@ -37,16 +36,16 @@ function buildWine(): Wine {
   }
 }
 
-function saveEdit(): void {
+async function saveEdit(): Promise<void> {
   const wine = buildWine()
-  store.updateWine(wine)
-  void router.push(`/wine/${wine.id}`)
+  if (await store.updateWine(wine)) await router.push(`/wine/${wine.id}`)
 }
 
-function saveNew(inventory?: InventoryInput): void {
+async function saveNew(inventory?: InventoryInput): Promise<void> {
   const wine = buildWine()
-  store.createWine(wine, status.value === 'COLLECTION' ? inventory : undefined)
-  void router.push(status.value === 'WISHLIST' ? '/wishlist' : `/wine/${wine.id}`)
+  if (await store.createWine(wine, status.value === 'COLLECTION' ? inventory : undefined)) {
+    await router.push(status.value === 'WISHLIST' ? '/wishlist' : `/wine/${wine.id}`)
+  }
 }
 </script>
 
@@ -68,9 +67,9 @@ function saveNew(inventory?: InventoryInput): void {
         <label class="field"><span>Referenspris</span><div class="input-suffix"><input v-model.number="form.referencePrice" type="number" min="0" /><span>kr</span></div></label>
         <label class="field"><span>Beskrivning</span><textarea v-model="form.description" rows="3" /></label>
         <label class="field"><span>Egna anteckningar</span><textarea v-model="form.notes" rows="2" /></label>
-        <button class="button button-primary button-block" type="submit"><Check v-if="isEdit || status === 'WISHLIST'" :size="19" aria-hidden="true" />{{ isEdit ? 'Spara ändringar' : status === 'WISHLIST' ? 'Spara på önskelistan' : 'Fortsätt till inköp' }}</button>
+        <button class="button button-primary button-block" type="submit" :disabled="store.isSaving.value"><Check v-if="isEdit || status === 'WISHLIST'" :size="19" aria-hidden="true" />{{ store.isSaving.value ? 'Sparar…' : isEdit ? 'Spara ändringar' : status === 'WISHLIST' ? 'Spara på önskelistan' : 'Fortsätt till inköp' }}</button>
       </form>
-      <InventoryForm v-else submit-label="Spara vin och flaskor" @submit="saveNew" />
+      <InventoryForm v-else submit-label="Spara vin och flaskor" :saving="store.isSaving.value" @submit="saveNew" />
     </div>
   </main>
 </template>

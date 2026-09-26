@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import type { InventoryInput, StorageLocation } from '@/types/domain'
 import { todayIso } from '@/utils/format'
 
-const props = withDefaults(defineProps<{ submitLabel?: string }>(), { submitLabel: 'Spara flaskor' })
+const props = withDefaults(defineProps<{ submitLabel?: string; saving?: boolean }>(), { submitLabel: 'Spara flaskor', saving: false })
 const emit = defineEmits<{ submit: [input: InventoryInput] }>()
 
 const quantity = ref(1)
@@ -13,6 +13,7 @@ const purchaseLocation = ref('Systembolaget')
 const storageLocation = ref<StorageLocation>('WINE_FRIDGE')
 
 function submit(): void {
+  if (props.saving) return
   emit('submit', {
     quantity: quantity.value,
     purchasePrice: purchasePrice.value,
@@ -34,6 +35,6 @@ function submit(): void {
       <label class="field"><span>Inköpsdatum</span><input v-model="purchaseDate" type="date" /></label>
       <label class="field"><span>Inköpsställe</span><input v-model="purchaseLocation" /></label>
     </div>
-    <button class="button button-primary button-block" type="submit">{{ props.submitLabel }}</button>
+    <button class="button button-primary button-block" type="submit" :disabled="props.saving">{{ props.saving ? 'Sparar…' : props.submitLabel }}</button>
   </form>
 </template>

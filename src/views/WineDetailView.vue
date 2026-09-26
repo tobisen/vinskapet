@@ -23,16 +23,14 @@ const modal = ref<'consume' | 'add' | 'correct'>()
 const correctedQuantity = ref(0)
 const buyLabels = { YES: 'Ja', MAYBE: 'Kanske', NO: 'Nej' }
 
-function add(input: InventoryInput): void {
+async function add(input: InventoryInput): Promise<void> {
   if (!wine.value) return
-  store.addInventory(wine.value.id, input)
-  modal.value = undefined
+  if (await store.addInventory(wine.value.id, input)) modal.value = undefined
 }
 
-function consume(input: ConsumeInput): void {
+async function consume(input: ConsumeInput): Promise<void> {
   if (!wine.value) return
-  store.consumeBottle(wine.value.id, input)
-  modal.value = undefined
+  if (await store.consumeBottle(wine.value.id, input)) modal.value = undefined
 }
 
 function openCorrection(): void {
@@ -40,15 +38,9 @@ function openCorrection(): void {
   modal.value = 'correct'
 }
 
-function correct(): void {
+async function correct(): Promise<void> {
   if (!wine.value) return
-  const items = inventory.value
-  if (items.length) {
-    items.forEach((item, index) => store.updateInventory({ ...item, quantity: index === 0 ? correctedQuantity.value : 0 }))
-  } else if (correctedQuantity.value > 0) {
-    store.addInventory(wine.value.id, { quantity: correctedQuantity.value, storageLocation: 'OTHER' })
-  }
-  modal.value = undefined
+  if (await store.correctInventory(wine.value.id, inventory.value, correctedQuantity.value)) modal.value = undefined
 }
 </script>
 
@@ -69,9 +61,9 @@ function correct(): void {
       <section class="detail-section"><div class="section-heading"><h2>Smaknoteringar</h2><div v-if="averageRating" class="rating"><Star :size="17" fill="currentColor" aria-hidden="true" /> {{ averageRating.toFixed(1) }}/5</div></div><p v-if="latestBuyAgain" class="buy-again">Köp igen: <strong>{{ buyLabels[latestBuyAgain] }}</strong></p><div v-if="tastings.length" class="tasting-list"><article v-for="tasting in tastings" :key="tasting.id"><div><strong>{{ formatDate(tasting.date) }}</strong><span v-if="tasting.rating" class="rating"><Star :size="14" fill="currentColor" aria-hidden="true" /> {{ tasting.rating }}/5</span></div><p v-if="tasting.review">“{{ tasting.review }}”</p></article></div><p v-else>Inga smaknoteringar ännu.</p></section>
     </div>
 
-    <ModalShell v-if="modal === 'consume'" title="Drick en flaska" @close="modal = undefined"><ConsumeForm @submit="consume" /></ModalShell>
-    <ModalShell v-if="modal === 'add'" title="Lägg till flaskor" @close="modal = undefined"><InventoryForm @submit="add" /></ModalShell>
-    <ModalShell v-if="modal === 'correct'" title="Korrigera antal" @close="modal = undefined"><form class="form-stack" @submit.prevent="correct"><label class="field"><span>Totalt antal flaskor</span><input v-model.number="correctedQuantity" type="number" min="0" required inputmode="numeric" /></label><p class="form-hint">Detta skapar ingen smaknotering.</p><button class="button button-primary button-block" type="submit">Spara antal</button></form></ModalShell>
+    <ModalShell v-if="modal === 'consume'" title="Drick en flaska" @close="modal = undefined"><ConsumeForm :saving="store.isSaving.value" @submit="consume" /></ModalShell>
+    <ModalShell v-if="modal === 'add'" title="Lägg till flaskor" @close="modal = undefined"><InventoryForm :saving="store.isSaving.value" @submit="add" /></ModalShell>
+    <ModalShell v-if="modal === 'correct'" title="Korrigera antal" @close="modal = undefined"><form class="form-stack" @submit.prevent="correct"><label class="field"><span>Totalt antal flaskor</span><input v-model.number="correctedQuantity" type="number" min="0" required inputmode="numeric" /></label><p class="form-hint">Detta skapar ingen smaknotering.</p><button class="button button-primary button-block" type="submit" :disabled="store.isSaving.value">{{ store.isSaving.value ? 'Sparar…' : 'Spara antal' }}</button></form></ModalShell>
   </main>
   <main v-else class="page"><div class="empty-state"><h1>Vinet hittades inte</h1><RouterLink class="button button-primary" to="/collection">Till samlingen</RouterLink></div></main>
 </template>

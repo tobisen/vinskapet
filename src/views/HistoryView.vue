@@ -24,5 +24,6 @@ const buyLabels = { YES: 'Ja', MAYBE: 'Kanske', NO: 'Nej' }
         </div>
       </RouterLink>
     </div>
+    <div v-if="events.length === 0" class="empty-state"><Star :size="30" aria-hidden="true" /><h2>Ingen historik ännu</h2><p>När du registrerar en drucken flaska visas den här.</p></div>
   </main>
 </template>

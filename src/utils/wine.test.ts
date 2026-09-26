@@ -49,6 +49,15 @@ describe('collection calculations', () => {
   it('calculates rating while ignoring unrated tastings', () => {
     expect(calculateAverageRating([{ id: '1', wineId: 'a', date: '2025-01-01', rating: 3 }, { id: '2', wineId: 'a', date: '2025-02-01' }, { id: '3', wineId: 'a', date: '2025-03-01', rating: 5 }])).toBe(4)
   })
+
+  it('sums multiple purchase rows for the same wine', () => {
+    const summary = buildWineSummaries([barbaresco], [
+      { id: 'lot-1', wineId: barbaresco.id, quantity: 2, purchasePrice: 195, currency: 'SEK', storageLocation: 'WINE_FRIDGE' },
+      { id: 'lot-2', wineId: barbaresco.id, quantity: 3, purchasePrice: 219, currency: 'SEK', storageLocation: 'WINE_FRIDGE' },
+    ], [])[0]!
+    expect(summary.quantity).toBe(5)
+    expect(summary.averagePrice).toBeCloseTo(209.4)
+  })
 })
 
 describe('collection discovery', () => {

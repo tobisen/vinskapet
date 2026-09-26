@@ -10,10 +10,9 @@ import type { InventoryInput, WineSummary } from '@/types/domain'
 const store = useWineStore()
 const purchasing = ref<WineSummary>()
 
-function purchase(input: InventoryInput): void {
+async function purchase(input: InventoryInput): Promise<void> {
   if (!purchasing.value) return
-  store.addInventory(purchasing.value.id, input)
-  purchasing.value = undefined
+  if (await store.addInventory(purchasing.value.id, input)) purchasing.value = undefined
 }
 </script>
 
@@ -25,11 +24,11 @@ function purchase(input: InventoryInput): void {
         <WineCard :wine="wine" />
         <div class="wishlist-actions">
           <button class="button button-primary" type="button" @click="purchasing = wine"><ShoppingBag :size="18" aria-hidden="true" /> Jag köpte den</button>
-          <button class="icon-button" type="button" aria-label="Ta bort från önskelistan" title="Ta bort från önskelistan" @click="store.removeFromWishlist(wine.id)"><Trash2 :size="19" aria-hidden="true" /></button>
+          <button class="icon-button" type="button" :disabled="store.isSaving.value" aria-label="Ta bort från önskelistan" title="Ta bort från önskelistan" @click="store.removeFromWishlist(wine.id)"><Trash2 :size="19" aria-hidden="true" /></button>
         </div>
       </article>
     </div>
     <div v-else class="empty-state"><ShoppingBag :size="30" aria-hidden="true" /><h2>Önskelistan är tom</h2><p>Du kan lägga till ett nytt vin och markera det som önskat.</p><RouterLink class="button button-primary" to="/wine/new">Lägg till vin</RouterLink></div>
-    <ModalShell v-if="purchasing" :title="`Jag köpte ${purchasing.name}`" @close="purchasing = undefined"><InventoryForm submit-label="Lägg i samlingen" @submit="purchase" /></ModalShell>
+    <ModalShell v-if="purchasing" :title="`Jag köpte ${purchasing.name}`" @close="purchasing = undefined"><InventoryForm submit-label="Lägg i samlingen" :saving="store.isSaving.value" @submit="purchase" /></ModalShell>
   </main>
 </template>

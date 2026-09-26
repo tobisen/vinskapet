@@ -36,6 +36,7 @@ const groups = computed(() => groupWines(results.value, group.value))
         <div class="wine-grid"><WineCard v-for="wine in wines" :key="wine.id" :wine="wine" /></div>
       </section>
     </div>
+    <div v-else-if="store.summaries.value.length === 0" class="empty-state"><LibraryBig :size="30" aria-hidden="true" /><h2>Din samling är tom</h2><p>Lägg till ditt första vin för att komma igång.</p><RouterLink class="button button-primary" to="/wine/new">Lägg till vin</RouterLink></div>
     <div v-else class="empty-state"><Search :size="30" aria-hidden="true" /><h2>Inga viner hittades</h2><p>Justera sökningen eller återställ filtren.</p></div>
   </main>
 </template>
