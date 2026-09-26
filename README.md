@@ -8,6 +8,7 @@ Vinskåpet är en mobile-first webbapp för att hålla ordning på en privat vin
 - Vite och TypeScript i strict-läge
 - Vue Router
 - Vitest
+- `vite-plugin-pwa` med Workbox-service worker
 - Vanlig CSS med lokala design tokens
 - LocalStorage för tillfällig lokal persistens
 
@@ -22,8 +23,24 @@ npm run dev
 
 Vite visar den lokala adressen i terminalen, normalt `http://localhost:5173`.
 
-Den senaste versionen på `main` publiceras automatiskt till
-`https://tobisen.github.io/vinskapet/` via GitHub Actions.
+Produktionsbygget använder root-sökvägen `/` och är anpassat för publicering på Vercel.
+
+## Installera som app
+
+Produktionsversionen är en installerbar PWA med lokalt manifest, service worker och
+appikoner. Nya deployer hämtas automatiskt när en uppdaterad service worker aktiveras.
+
+På Android öppnar du appen i Chrome och väljer **Installera app** i webbläsarens meny
+eller installationsprompt. På iPhone öppnar du appen i Safari, väljer **Dela** och
+sedan **Lägg till på hemskärmen**. Appen startar därefter i standalone-läge utan
+webbläsarens vanliga gränssnitt.
+
+PWA-funktionerna genereras endast i produktionsbygget. Testa dem lokalt med:
+
+```bash
+npm run build
+npm run preview
+```
 
 ## Scripts
 
@@ -45,10 +62,10 @@ npm run preview     # Förhandsvisa produktionsbygget
 - `src/components` innehåller återanvändbara kort, badges, navigation och snabbformulär.
 - `src/views` innehåller routade arbetsvyer.
 - `src/data/seed.ts` laddas endast första gången lokal data saknas.
-- `.github/workflows/deploy-pages.yml` testar, bygger och publicerar appen till GitHub Pages.
+- `vite.config.ts` innehåller manifest, cache- och service worker-konfiguration för PWA:n.
 
 LocalStorage är avsiktligt en temporär implementation bakom `WineRepository`. Den kan senare ersättas med ett backend-repository utan att vyerna behöver skrivas om.
 
 ## Inte implementerat ännu
 
-MVP:n innehåller ingen backend, produktionsdatabas, autentisering, användarsynkning, extern bildlagring, Systembolaget-integration, OCR, streckkodsläsning, AI-funktioner, pushnotiser eller fullständig PWA-installation. Domän- och repositorygränserna är förberedda för fortsatt utveckling av dessa områden.
+MVP:n innehåller ingen backend, produktionsdatabas, autentisering, användarsynkning, extern bildlagring, Systembolaget-integration, OCR, streckkodsläsning, AI-funktioner eller pushnotiser. Domän- och repositorygränserna är förberedda för fortsatt utveckling av dessa områden.
