@@ -7,7 +7,7 @@ import WineFormView from '@/views/WineFormView.vue'
 import WishlistView from '@/views/WishlistView.vue'
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
     { path: '/', redirect: '/collection' },

@@ -22,6 +22,9 @@ npm run dev
 
 Vite visar den lokala adressen i terminalen, normalt `http://localhost:5173`.
 
+Den senaste versionen på `main` publiceras automatiskt till
+`https://tobisen.github.io/vinskapet/` via GitHub Actions.
+
 ## Scripts
 
 ```bash
@@ -42,6 +45,7 @@ npm run preview     # Förhandsvisa produktionsbygget
 - `src/components` innehåller återanvändbara kort, badges, navigation och snabbformulär.
 - `src/views` innehåller routade arbetsvyer.
 - `src/data/seed.ts` laddas endast första gången lokal data saknas.
+- `.github/workflows/deploy-pages.yml` testar, bygger och publicerar appen till GitHub Pages.
 
 LocalStorage är avsiktligt en temporär implementation bakom `WineRepository`. Den kan senare ersättas med ett backend-repository utan att vyerna behöver skrivas om.
 
