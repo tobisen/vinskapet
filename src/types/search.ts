@@ -18,6 +18,10 @@ export interface WineSearchResult {
   productUrl?: string
   referencePrice?: number
   currency?: Currency
+  servingTemperatureMin?: number
+  servingTemperatureMax?: number
+  foodPairings?: string[]
+  description?: string
   existingWine?: Wine
   quantity?: number
 }

@@ -62,16 +62,43 @@ förenklat manuellt formulär. Scannern använder kameran först när användare
 `@zxing/browser`. Kamera kräver HTTPS i produktion; `localhost` räknas som en
 säker kontext under utveckling.
 
-Sökningen omfattar den inloggade användarens redan laddade Supabase-samling och
-matchar bland annat producent, namn, årgång, druva och Systembolagets
-artikelnummer. En identifierad dubblett får en ny inventory-post i stället för
-en ny wine-post.
+Sökningen kombinerar den inloggade användarens Supabase-samling med en privat,
+on-demand-sökning på Systembolagets publika produktsidor. Artikelnummer och
+textsökning går via den JWT-skyddade Supabase Edge Function
+`systembolaget-search`; ingen extern API-nyckel exponeras i klienten. Funktionen
+använder ett kompakt, lokalt URL-index från vin-sitemapen för att hitta kandidater
+och läser strukturerad produktdata från högst åtta produktsidor per sökning. Om en
+helt ny produkt saknas i indexet används live-sitemapen som fallback. Resultaten innehåller bland annat pris,
+bild, årgång, ursprung, druvor, alkoholhalt, servering och matmatchning när fälten
+finns på produktsidan.
 
-Systembolaget-sökning, barcode-persistens, etikettigenkänning och AI enrichment
-är endast förberedda som gränssnitt. Ingen scraping, extern produktintegration,
-databasmigration eller frontend-API-nyckel har lagts till. Utredning och den
-föreslagna, ej körda barcode-migrationen finns i
-[`docs/smart-add-research.md`](docs/smart-add-research.md).
+Systembolagets pris sparas som referenspris. Inköpspriset är ett separat,
+redigerbart fält i inventory-formuläret. Årgången måste bekräftas eftersom samma
+artikelnummer kan byta årgång. En identifierad dubblett får en ny inventory-post
+i stället för en ny wine-post.
+
+Deploya Edge Function till samma Supabase-projekt som appen använder:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase functions deploy systembolaget-search
+```
+
+Funktionen behöver inga egna secrets. Supabase verifierar användarens JWT enligt
+`supabase/config.toml`. Cachen är kortlivad och ligger i Edge Function-instansens
+minne; ingen databas- eller RLS-ändring krävs.
+
+Uppdatera det paketerade produktindexet före en ny funktionsdeploy med:
+
+```bash
+npm run systembolaget:index
+```
+
+Systembolagets produktsidor exponerar inte någon verifierad EAN-koppling.
+Streckkodsläsaren fungerar därför fortsatt som läsare och leder vidare till sök
+eller manuell registrering när koden saknar lokal koppling. Den föreslagna, ej
+körda barcode-migrationen finns i [`docs/smart-add-research.md`](docs/smart-add-research.md).
 
 Wine-metadata kan kompletteras i efterhand utan att skriva över befintliga värden.
 Det säkra Edge Function-upplägget och det förberedda batchflödet beskrivs i
@@ -122,6 +149,6 @@ i frontendmiljön. RLS är den faktiska säkerhetsgränsen för `wines`, `invent
 
 ## Inte implementerat ännu
 
-MVP:n innehåller ingen extern bildlagring, Systembolaget-integration, OCR,
-streckkodsläsning, AI-funktioner eller pushnotiser. Synkning sker via Supabase för den
+MVP:n innehåller ingen extern bildlagring, verifierad barcode-till-produktkoppling,
+OCR, extern AI-enrichment eller pushnotiser. Synkning sker via Supabase för den
 inloggade användaren.

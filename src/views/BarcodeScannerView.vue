@@ -6,6 +6,8 @@ import { useRouter } from 'vue-router'
 import { useWineStore } from '@/composables/useWineStore'
 import { CompositeWineSearchProvider } from '@/search/CompositeWineSearchProvider'
 import { LocalCollectionWineSearchProvider } from '@/search/LocalCollectionWineSearchProvider'
+import { SystembolagetWineSearchProvider } from '@/search/SystembolagetWineSearchProvider'
+import { supabase } from '@/services/supabase'
 import type { WineSearchResult } from '@/types/search'
 import { eanFormat, isValidEan, normalizeEan } from '@/utils/barcode'
 
@@ -24,6 +26,7 @@ let handled = false
 
 const provider = new CompositeWineSearchProvider([
   new LocalCollectionWineSearchProvider(() => store.summaries.value),
+  new SystembolagetWineSearchProvider((name, options) => supabase.functions.invoke(name, options)),
 ])
 const codeFormat = computed(() => code.value ? eanFormat(code.value) : null)
 const isOnline = computed(() => navigator.onLine)

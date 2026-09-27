@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Wine, WineSummary } from '@/types/domain'
 import type { WineSearchProvider } from '@/types/search'
 import { LatestWineSearch } from './LatestWineSearch'
+import { mergeSearchResults } from './CompositeWineSearchProvider'
 import { LocalCollectionWineSearchProvider } from './LocalCollectionWineSearchProvider'
 import { findDuplicateWine, saveWinePurchase } from './duplicates'
 
@@ -44,6 +45,17 @@ describe('duplicate matching', () => {
     expect(result).toEqual({ saved: true, wineId: 'deaetna' })
     expect(created).toBe(0)
     expect(inventoryAdded).toBe(1)
+  })
+})
+
+describe('combined search', () => {
+  it('keeps the local result when the same product is returned externally', () => {
+    const results = mergeSearchResults([
+      { source: 'SYSTEMBOLAGET', externalId: 'external', name: 'DeAetna Rosso', productNumber: '12345' },
+      { source: 'LOCAL_COLLECTION', externalId: wine.id, name: wine.name, productNumber: '12 345', existingWine: wine },
+    ])
+    expect(results).toHaveLength(1)
+    expect(results[0]?.source).toBe('LOCAL_COLLECTION')
   })
 })
 

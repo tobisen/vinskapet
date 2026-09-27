@@ -1,0 +1,2 @@
+[functions.systembolaget-search]
+verify_jwt = true

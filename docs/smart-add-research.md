@@ -4,7 +4,11 @@ Research date: 2026-09-26.
 
 ## Systembolaget product data
 
-No Systembolaget product integration is enabled in this iteration.
+The project now contains an explicitly approved private, low-volume Systembolaget
+integration. It does not use the undocumented e-commerce API or an extracted API
+key. A JWT-protected Supabase Edge Function uses a generated compact index of the
+public wine sitemap, selects at most eight candidate product URLs and parses each page's structured
+`__NEXT_DATA__` payload on demand.
 
 | Option | Status | Cost/auth | Browser/CORS | Barcode | Assessment |
 | --- | --- | --- | --- | --- | --- |
@@ -17,8 +21,9 @@ No Systembolaget product integration is enabled in this iteration.
 
 Systembolaget's current user terms explicitly prohibit agents, robots, crawlers and
 similar automated tools used to collect information from the website or app for
-services about alcoholic products. The app must therefore not scrape the site or
-call its undocumented e-commerce endpoint.
+services about alcoholic products. The owner has explicitly accepted that terms and
+stability risk for this private, low-volume implementation. The app still avoids the
+undocumented e-commerce endpoint, bulk collection and extracted API keys.
 
 Sources:
 
@@ -34,9 +39,11 @@ The undocumented Systembolaget endpoint and unofficial mirrors expose useful fie
 such as product names, producer, vintage, origin, alcohol, article/product numbers,
 price and sometimes images. No reviewed source demonstrated a reliable EAN field.
 Systembolaget also warns that vintage information may be wrong around vintage changes,
-so an eventual provider must always ask the user to confirm vintage. CORS behavior of
-undocumented endpoints is not a stable contract, and all authenticated/commercial
-providers must be called through a backend or Supabase Edge Function.
+so the implemented provider always asks the user to confirm vintage. The integration
+is isolated in `supabase/functions/systembolaget-search` because the page format may
+change and direct browser requests are unsuitable. Product data is cached in memory
+for 24 hours and the sitemap for six hours while an Edge Function instance remains
+warm. Barcode lookup remains disabled because no verified EAN field was found.
 
 ## Proposed barcode migration (not applied)
 
