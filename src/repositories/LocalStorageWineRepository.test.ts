@@ -63,4 +63,22 @@ describe('LocalStorageWineRepository', () => {
     expect(repository.getWine(wineId)).toBeDefined()
     expect(repository.getWine(wineId)?.status).toBe('HISTORY_ONLY')
   })
+
+  it('deletes a tasting without restoring inventory', () => {
+    const wineId = 'umani-ronchi-2022'
+    const tasting = repository.consumeBottle(wineId, { date: '2026-09-26', review: 'Fin.' })
+    const quantity = repository.getInventory(wineId).reduce((sum, item) => sum + item.quantity, 0)
+    repository.deleteTasting(tasting.id)
+    expect(repository.getTastings(wineId)).not.toContainEqual(expect.objectContaining({ id: tasting.id }))
+    expect(repository.getInventory(wineId).reduce((sum, item) => sum + item.quantity, 0)).toBe(quantity)
+  })
+
+  it('deletes a Wine and its inventory and tastings', () => {
+    const wineId = 'prunotto-barbaresco-2020'
+    repository.consumeBottle(wineId, { date: '2026-09-26' })
+    repository.deleteWine(wineId)
+    expect(repository.getWine(wineId)).toBeUndefined()
+    expect(repository.getInventory(wineId)).toEqual([])
+    expect(repository.getTastings(wineId)).toEqual([])
+  })
 })

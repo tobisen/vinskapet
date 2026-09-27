@@ -92,7 +92,9 @@ export interface Database {
       wine_barcodes: { Row: WineBarcodeRow; Insert: WineBarcodeInsert; Update: Partial<WineBarcodeInsert>; Relationships: [] }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      delete_own_wine: { Args: { target_wine_id: string }; Returns: undefined }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

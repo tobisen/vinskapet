@@ -22,4 +22,9 @@ export class SupabaseTastingsRepository {
     if (error) throw new RepositoryError('Kunde inte spara smaknoteringen.', error)
     return tastingRowToDomain(data)
   }
+
+  async deleteTasting(tastingId: string): Promise<void> {
+    const { error } = await supabase.from('tastings').delete().eq('id', tastingId)
+    if (error) throw new RepositoryError('Kunde inte ta bort smaknoteringen.', error)
+  }
 }

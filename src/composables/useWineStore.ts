@@ -108,6 +108,12 @@ export function useWineStore() {
     }, 'Ändringarna är sparade', 'Kunde inte spara vinet. Försök igen.')
   }
 
+  async function deleteWine(wineId: string): Promise<boolean> {
+    return mutate('delete-wine', async () => {
+      await repositories.wines.deleteWine(wineId)
+    }, 'Vinet har tagits bort', 'Kunde inte ta bort vinet. Försök igen.')
+  }
+
   async function enrichWine(
     wineId: string,
     service: WineEnrichmentService,
@@ -163,6 +169,12 @@ export function useWineStore() {
     }, 'En flaska har tagits bort', 'Kunde inte minska antalet flaskor. Försök igen.')
   }
 
+  async function deleteTasting(tastingId: string): Promise<boolean> {
+    return mutate('delete-tasting', async () => {
+      await repositories.tastings.deleteTasting(tastingId)
+    }, 'Smaknoteringen har tagits bort', 'Kunde inte ta bort smaknoteringen. Försök igen.')
+  }
+
   async function addToWishlist(wineId: string): Promise<boolean> {
     return mutate('add-wishlist', async () => {
       await repositories.wines.addToWishlist(wineId)
@@ -179,7 +191,7 @@ export function useWineStore() {
     data: readonly(data), loading: readonly(loading), initialized: readonly(initialized),
     loadError: readonly(loadError), operationError: readonly(operationError), pendingAction: readonly(pendingAction),
     isSaving, notice: readonly(notice), enrichmentStatuses: readonly(enrichmentStatuses), summaries, inStock, wishlist, bottleCount, collectionValue,
-    getWine, getInventory, getTastings, loadData, clearData, createWine, updateWine, enrichWine,
-    addInventory, correctInventory, consumeBottle, removeBottle, addToWishlist, removeFromWishlist,
+    getWine, getInventory, getTastings, loadData, clearData, createWine, updateWine, deleteWine, enrichWine,
+    addInventory, correctInventory, consumeBottle, removeBottle, deleteTasting, addToWishlist, removeFromWishlist,
   }
 }

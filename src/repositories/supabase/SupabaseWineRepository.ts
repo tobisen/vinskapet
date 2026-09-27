@@ -34,6 +34,11 @@ export class SupabaseWineRepository {
     return wineRowToDomain(data)
   }
 
+  async deleteWine(wineId: string): Promise<void> {
+    const { error } = await supabase.rpc('delete_own_wine', { target_wine_id: wineId })
+    if (error) throw new RepositoryError('Kunde inte ta bort vinet.', error)
+  }
+
   async getWishlist(): Promise<Wine[]> {
     const { data, error } = await supabase.from('wines').select('*').eq('status', 'WISHLIST').order('created_at')
     if (error) throw new RepositoryError('Kunde inte ladda önskelistan.', error)

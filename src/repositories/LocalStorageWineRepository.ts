@@ -42,6 +42,15 @@ export class LocalStorageWineRepository implements WineRepository {
     return wine
   }
 
+  deleteWine(wineId: string): void {
+    const data = this.read()
+    if (!data.wines.some((wine) => wine.id === wineId)) throw new Error('Vinet kunde inte hittas.')
+    data.wines = data.wines.filter((wine) => wine.id !== wineId)
+    data.inventory = data.inventory.filter((item) => item.wineId !== wineId)
+    data.tastings = data.tastings.filter((tasting) => tasting.wineId !== wineId)
+    this.write(data)
+  }
+
   getInventory(wineId?: string): Inventory[] {
     const items = this.read().inventory
     return wineId ? items.filter((item) => item.wineId === wineId) : items
@@ -122,6 +131,13 @@ export class LocalStorageWineRepository implements WineRepository {
     data.tastings.push(clone(tasting))
     this.write(data)
     return tasting
+  }
+
+  deleteTasting(tastingId: string): void {
+    const data = this.read()
+    if (!data.tastings.some((tasting) => tasting.id === tastingId)) throw new Error('Smaknoteringen kunde inte hittas.')
+    data.tastings = data.tastings.filter((tasting) => tasting.id !== tastingId)
+    this.write(data)
   }
 
   getWishlist(): Wine[] { return this.read().wines.filter((wine) => wine.status === 'WISHLIST') }
