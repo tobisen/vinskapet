@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { ArrowLeft, Search, Wine } from '@lucide/vue'
+import { ArrowLeft, Search } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import InventoryForm from '@/components/InventoryForm.vue'
+import WineImage from '@/components/WineImage.vue'
 import WineTypeBadge from '@/components/WineTypeBadge.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { CompositeWineSearchProvider } from '@/search/CompositeWineSearchProvider'
@@ -76,7 +77,7 @@ async function addInventory(input: InventoryInput): Promise<void> {
         <p v-if="loading" class="search-feedback" role="status">Söker i din samling…</p>
         <div v-else-if="results.length" class="search-results">
           <button v-for="result in results" :key="`${result.source}-${result.externalId}`" type="button" @click="selected = result">
-            <div class="search-result__visual"><Wine :size="25" aria-hidden="true" /></div>
+            <WineImage :src="result.imageUrl" :wine-type="result.wineType" size="sm" :alt="`${result.producer ?? 'Vin'} ${result.name}`" />
             <span><small>{{ result.producer }}</small><strong>{{ result.name }} <b v-if="result.vintage">{{ result.vintage }}</b></strong><em>{{ [result.region, result.country].filter(Boolean).join(' · ') }}</em></span>
             <span class="search-result__aside"><WineTypeBadge v-if="result.wineType" :type="result.wineType" /><small>Finns redan · {{ result.quantity }}</small><b v-if="result.referencePrice">{{ formatCurrency(result.referencePrice, result.currency) }}</b></span>
           </button>

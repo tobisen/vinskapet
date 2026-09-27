@@ -3,6 +3,7 @@ import { ChevronRight, MapPin } from '@lucide/vue'
 import type { WineSummary } from '@/types/domain'
 import { formatCurrency } from '@/utils/format'
 import DrinkingStatusBadge from './DrinkingStatusBadge.vue'
+import WineImage from './WineImage.vue'
 import WineTypeBadge from './WineTypeBadge.vue'
 
 defineProps<{ wine: WineSummary }>()
@@ -14,12 +15,15 @@ defineProps<{ wine: WineSummary }>()
       <WineTypeBadge :type="wine.wineType" />
       <span class="wine-card__quantity">{{ wine.quantity }} {{ wine.quantity === 1 ? 'flaska' : 'flaskor' }}</span>
     </div>
-    <div class="wine-card__body">
-      <div>
-        <p class="wine-card__producer">{{ wine.producer }}</p>
-        <h3>{{ wine.name }} <span v-if="wine.vintage">{{ wine.vintage }}</span></h3>
+    <div class="wine-card__image-row">
+      <WineImage :src="wine.image" :wine-type="wine.wineType" size="md" :alt="`${wine.producer} ${wine.name}`" />
+      <div class="wine-card__body">
+        <div>
+          <p class="wine-card__producer">{{ wine.producer }}</p>
+          <h3>{{ wine.name }} <span v-if="wine.vintage">{{ wine.vintage }}</span></h3>
+        </div>
+        <ChevronRight :size="20" aria-hidden="true" />
       </div>
-      <ChevronRight :size="20" aria-hidden="true" />
     </div>
     <p class="wine-card__origin">
       {{ [wine.region, wine.country].filter(Boolean).join(' · ') }}

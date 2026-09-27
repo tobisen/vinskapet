@@ -6,6 +6,7 @@ import ConsumeForm from '@/components/ConsumeForm.vue'
 import DrinkingStatusBadge from '@/components/DrinkingStatusBadge.vue'
 import InventoryForm from '@/components/InventoryForm.vue'
 import ModalShell from '@/components/ModalShell.vue'
+import WineImage from '@/components/WineImage.vue'
 import WineTypeBadge from '@/components/WineTypeBadge.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import type { ConsumeInput, InventoryInput } from '@/types/domain'
@@ -48,7 +49,9 @@ async function correct(): Promise<void> {
   <main v-if="wine" class="detail-page">
     <div class="detail-topbar"><RouterLink class="back-link" to="/collection"><ArrowLeft :size="19" aria-hidden="true" /> Samling</RouterLink><RouterLink class="icon-button" :to="`/wine/${wine.id}/edit`" aria-label="Redigera vin" title="Redigera"><Edit3 :size="19" aria-hidden="true" /></RouterLink></div>
     <header class="wine-detail-header">
-      <div class="wine-visual" :class="`wine-visual--${wine.wineType.toLowerCase()}`" aria-hidden="true"><div class="bottle-shape"><span>V</span></div></div>
+      <div class="wine-visual" :class="`wine-visual--${wine.wineType.toLowerCase()}`" aria-hidden="true">
+        <WineImage :src="wine.image" :wine-type="wine.wineType" size="lg" :alt="`${wine.producer} ${wine.name}`" />
+      </div>
       <div class="wine-detail-intro"><WineTypeBadge :type="wine.wineType" /><p class="eyebrow">{{ wine.producer }}</p><h1>{{ wine.name }} <span v-if="wine.vintage">{{ wine.vintage }}</span></h1><p>{{ [wine.appellation, wine.region, wine.country].filter(Boolean).join(' · ') }}</p><div class="detail-status"><DrinkingStatusBadge :wine="wine" /><strong>{{ wine.quantity }} {{ wine.quantity === 1 ? 'flaska' : 'flaskor' }}</strong></div></div>
     </header>
 

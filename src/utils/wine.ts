@@ -10,6 +10,7 @@ import type {
   WineSummary,
   WineType,
 } from '@/types/domain'
+import { getWinePlaceholderVariant, normalizeWineImageUrl } from '@/utils/wineImage'
 
 export const wineTypeLabels: Record<WineType, string> = {
   RED: 'Rött',
@@ -190,3 +191,11 @@ export function groupWines(wines: WineSummary[], mode: GroupMode): Map<string, W
 export const groupWinesByCountry = (wines: WineSummary[]) => groupWines(wines, 'COUNTRY_REGION')
 export const groupWinesByType = (wines: WineSummary[]) => groupWines(wines, 'TYPE')
 export const groupWinesByDrinkingPeriod = (wines: WineSummary[]) => groupWines(wines, 'DRINKING_PERIOD')
+
+export function getWineImageSource(wine: Pick<Wine, 'image' | 'wineType'> | undefined): string | undefined {
+  return normalizeWineImageUrl(wine?.image)
+}
+
+export function getWinePlaceholderClass(wineType?: WineType): string {
+  return getWinePlaceholderVariant(wineType)
+}
