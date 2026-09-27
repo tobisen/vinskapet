@@ -14,6 +14,7 @@ export type DrinkingStatus = 'WAIT' | 'CAN_DRINK' | 'OPTIMAL' | 'DRINK_SOON' | '
 export type MaturityAssessment = 'TOO_YOUNG' | 'GOOD_NOW' | 'PERFECT' | 'DECLINING'
 export type BuyAgain = 'YES' | 'MAYBE' | 'NO'
 export type Currency = 'SEK' | 'EUR'
+export type WineBarcodeSource = 'MANUAL' | 'SYSTEMBOLAGET' | 'OPEN_FOOD_FACTS'
 
 export interface Wine {
   id: string
@@ -71,6 +72,14 @@ export interface Tasting {
   maturityAssessment?: MaturityAssessment
   buyAgain?: BuyAgain
   notes?: string
+}
+
+export interface WineBarcode {
+  id: string
+  wineId: string
+  barcode: string
+  source: WineBarcodeSource
+  createdAt: string
 }
 
 export interface AppData {

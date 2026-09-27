@@ -97,8 +97,11 @@ npm run systembolaget:index
 
 Systembolagets produktsidor exponerar inte någon verifierad EAN-koppling.
 Streckkodsläsaren fungerar därför fortsatt som läsare och leder vidare till sök
-eller manuell registrering när koden saknar lokal koppling. Den föreslagna, ej
-körda barcode-migrationen finns i [`docs/smart-add-research.md`](docs/smart-add-research.md).
+eller manuell registrering när koden är okänd. Kända EAN-koder slås först upp i den
+egna `wine_barcodes`-relationen. En kostnadsfri Open Food Facts-läsning används som
+sekundär fallback, och manuellt bekräftade kopplingar lärs in för nästa scanning.
+Migration, RLS och källbedömning finns i
+[`docs/smart-add-research.md`](docs/smart-add-research.md).
 
 Wine-metadata kompletteras i bakgrunden efter att ett nytt vin sparats eller
 manuellt från vindetaljen. `LocalWineEnrichmentProvider` använder lokala,

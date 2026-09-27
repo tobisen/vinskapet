@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.enrich-wine]
 verify_jwt = true
+
+[functions.barcode-lookup]
+verify_jwt = true

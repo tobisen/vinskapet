@@ -3,7 +3,7 @@ import { eanFormat, isValidEan, normalizeEan } from './barcode'
 
 describe('EAN utilities', () => {
   it('normalizes spaces and dashes', () => {
-    expect(normalizeEan('400 6381-333 931')).toBe('4006381333931')
+    expect(normalizeEan('400 6381–333.931')).toBe('4006381333931')
   })
 
   it('validates EAN-13 checksums', () => {

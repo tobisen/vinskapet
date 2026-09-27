@@ -6,6 +6,8 @@ import InventoryForm from '@/components/InventoryForm.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { findDuplicateWine, saveWinePurchase } from '@/search/duplicates'
 import type { InventoryInput, Wine, WineStatus, WineType } from '@/types/domain'
+import { repositories } from '@/services/repository'
+import { isValidEan, normalizeEan } from '@/utils/barcode'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +17,9 @@ const isEdit = computed(() => Boolean(route.params.id))
 const step = ref(1)
 const duplicate = ref<Wine>()
 const status = ref<WineStatus>(existing.value?.status ?? 'COLLECTION')
+const pendingBarcode = computed(() => typeof route.query.barcode === 'string' && isValidEan(route.query.barcode) ? normalizeEan(route.query.barcode) : '')
+const linkBarcode = ref(true)
+const barcodeError = ref('')
 const now = new Date().toISOString()
 const form = reactive({
   producer: existing.value?.producer ?? '', name: existing.value?.name ?? (typeof route.query.name === 'string' ? route.query.name : ''), vintage: existing.value?.vintage,
@@ -27,6 +32,18 @@ const form = reactive({
   optimalDrinkingStart: existing.value?.optimalDrinkingStart, optimalDrinkingEnd: existing.value?.optimalDrinkingEnd,
   description: existing.value?.description ?? '', notes: existing.value?.notes ?? '',
 })
+
+async function saveBarcodeMapping(wineId: string): Promise<boolean> {
+  if (!pendingBarcode.value || !linkBarcode.value) return true
+  barcodeError.value = ''
+  try {
+    await repositories.barcodes.addMapping(pendingBarcode.value, wineId, 'MANUAL')
+    return true
+  } catch {
+    barcodeError.value = 'Vinet sparades, men streckkodskopplingen kunde inte sparas.'
+    return false
+  }
+}
 
 function buildWine(): Wine {
   return {
@@ -48,7 +65,9 @@ function buildWine(): Wine {
 
 async function saveEdit(): Promise<void> {
   const wine = buildWine()
-  if (await store.updateWine(wine)) await router.push(`/wine/${wine.id}`)
+  if (await store.updateWine(wine)) {
+    if (await saveBarcodeMapping(wine.id)) await router.push(`/wine/${wine.id}`)
+  }
 }
 
 async function saveNew(inventory?: InventoryInput): Promise<void> {
@@ -58,10 +77,14 @@ async function saveNew(inventory?: InventoryInput): Promise<void> {
       createWine: store.createWine,
       addInventory: store.addInventory,
     })
-    if (result.saved) await router.push(`/wine/${result.wineId}`)
+    if (result.saved) {
+      if (await saveBarcodeMapping(result.wineId)) await router.push(`/wine/${result.wineId}`)
+    }
     return
   }
-  if (await store.createWine(wine)) await router.push('/wishlist')
+  if (await store.createWine(wine)) {
+    if (await saveBarcodeMapping(wine.id)) await router.push('/wishlist')
+  }
 }
 
 function continueNew(): void {
@@ -77,6 +100,8 @@ function continueNew(): void {
     <header class="form-page__header"><button class="back-link" type="button" @click="router.back()"><ArrowLeft :size="19" aria-hidden="true" /> Tillbaka</button><span v-if="!isEdit">Steg {{ step }} av 2</span></header>
     <div class="form-page__content">
       <div><p class="eyebrow">{{ isEdit ? 'Uppdatera information' : duplicate ? 'Finns i samlingen' : 'Ny registrering' }}</p><h1>{{ isEdit ? 'Redigera vin' : duplicate ? `${duplicate.name} ${duplicate.vintage ?? ''}` : 'Lägg till vin' }}</h1><p>{{ step === 1 || isEdit ? 'Grunduppgifter räcker. Resten kan kompletteras senare.' : duplicate ? 'Vinet finns redan. Lägg till flaskorna på den befintliga posten.' : 'Hur många flaskor köpte du?' }}</p></div>
+      <div v-if="pendingBarcode" class="barcode-link-notice"><strong>Streckkoden lästes</strong><span>{{ pendingBarcode }}</span><label class="checkbox-field"><input v-model="linkBarcode" type="checkbox" /><span>Koppla denna streckkod till vinet</span></label></div>
+      <p v-if="barcodeError" class="form-error" role="alert">{{ barcodeError }}</p>
       <form v-if="step === 1 || isEdit" class="form-stack wine-form" @submit.prevent="isEdit ? saveEdit() : (status === 'WISHLIST' ? saveNew() : continueNew())">
         <div v-if="!isEdit" class="segmented form-mode"><button type="button" :class="{ selected: status === 'COLLECTION' }" @click="status = 'COLLECTION'">Till samlingen</button><button type="button" :class="{ selected: status === 'WISHLIST' }" @click="status = 'WISHLIST'">Till önskelistan</button></div>
         <label class="field"><span>Producent *</span><input v-model="form.producer" required autocomplete="organization" placeholder="Exempel: Prunotto" /></label>

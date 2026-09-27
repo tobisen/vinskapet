@@ -81,4 +81,10 @@ describe('external purchase mapping', () => {
     expect(wine.storagePotential).toBe('HIGH')
     expect(wine).not.toHaveProperty('purchasePrice')
   })
+
+  it('treats barcode vintage as user-confirmed rather than guaranteed', () => {
+    const result = { source: 'SYSTEMBOLAGET', producer: 'Luigi Pira', name: 'Barolo', wineType: 'RED' as const, vintage: 2024 }
+    expect(wineFromSearchResult(result, 2023).vintage).toBe(2023)
+    expect(wineFromSearchResult(result, null).vintage).toBeUndefined()
+  })
 })

@@ -45,7 +45,39 @@ change and direct browser requests are unsuitable. Product data is cached in mem
 for 24 hours and the sitemap for six hours while an Edge Function instance remains
 warm. Barcode lookup remains disabled because no verified EAN field was found.
 
-## Proposed barcode migration (not applied)
+## Barcode implementation
+
+The currently parsed Systembolaget `__NEXT_DATA__` product object contains product
+identity, article number, packaging, origin, price, image and wine metadata, but no
+verified EAN, GTIN or barcode field. `SystembolagetWineSearchProvider.lookupBarcode`
+therefore deliberately returns no result instead of treating an article number as
+an EAN.
+
+Open Food Facts is used as a secondary barcode fallback through the JWT-protected
+`barcode-lookup` Edge Function. Its official read endpoint is free, needs no API
+key and documents a 15 product reads/minute/IP limit. The function identifies
+itself with a custom User-Agent, rate-limits callers and only returns products whose
+category explicitly identifies them as wine. Community data is always presented
+for user confirmation and never silently linked.
+
+Lookup order:
+
+1. User-owned `wine_barcodes`, including the local device cache.
+2. `SystembolagetWineSearchProvider.lookupBarcode` if EAN becomes available later.
+3. Open Food Facts barcode read.
+4. Text search/manual Wine selection followed by a confirmed local mapping.
+
+The migration in `supabase/migrations/202609270001_create_wine_barcodes.sql`
+creates the one-to-many relation, validates EAN length and check digit in the
+database, adds a per-user unique constraint and enables owner-only RLS policies.
+It replaces the earlier proposal below.
+
+Sources:
+
+- https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+- https://openfoodfacts.github.io/documentation/docs/Product-Opener/v3/products/get-api-v3-product-code/
+
+## Original migration sketch
 
 The current schema has no barcode column or relation. A separate relation avoids
 treating EAN as a wine/vintage identity and allows multiple codes per wine.
@@ -85,5 +117,5 @@ create policy "Users can delete own wine barcodes"
   using (auth.uid() = user_id);
 ```
 
-This migration is only a proposal. It has not been executed and the app does not
-pretend to remember scanned barcodes until it is approved.
+The sketch above is retained for historical context. The implemented migration is
+stricter and is the source of truth.

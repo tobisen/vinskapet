@@ -1,14 +1,14 @@
 import type { Wine, WineType } from '@/types/domain'
 import type { WineSearchResult } from '@/types/search'
 
-export function wineFromSearchResult(result: WineSearchResult, vintage = result.vintage, wineType: WineType | undefined = result.wineType): Wine {
+export function wineFromSearchResult(result: WineSearchResult, vintage: number | null | undefined = result.vintage, wineType: WineType | undefined = result.wineType): Wine {
   if (!result.producer?.trim() || !wineType) throw new Error('Wine result lacks required metadata')
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
     producer: result.producer.trim(),
     name: result.name.trim(),
-    vintage,
+    vintage: vintage ?? undefined,
     country: result.country,
     region: result.region,
     appellation: result.appellation,

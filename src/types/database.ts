@@ -1,4 +1,4 @@
-import type { BuyAgain, Currency, MaturityAssessment, StorageLocation, WineStatus, WineType } from './domain'
+import type { BuyAgain, Currency, MaturityAssessment, StorageLocation, WineBarcodeSource, WineStatus, WineType } from './domain'
 
 export interface WineRow {
   [key: string]: unknown
@@ -68,9 +68,20 @@ export interface TastingRow {
   updated_at: string
 }
 
+export interface WineBarcodeRow {
+  [key: string]: unknown
+  id: string
+  user_id: string
+  wine_id: string
+  barcode: string
+  source: WineBarcodeSource
+  created_at: string
+}
+
 type WineInsert = Omit<WineRow, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<WineRow, 'id' | 'created_at' | 'updated_at'>>
 type InventoryInsert = Omit<InventoryRow, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<InventoryRow, 'id' | 'created_at' | 'updated_at'>>
 type TastingInsert = Omit<TastingRow, 'id' | 'created_at' | 'updated_at'> & Partial<Pick<TastingRow, 'id' | 'created_at' | 'updated_at'>>
+type WineBarcodeInsert = Omit<WineBarcodeRow, 'id' | 'created_at'> & Partial<Pick<WineBarcodeRow, 'id' | 'created_at'>>
 
 export interface Database {
   public: {
@@ -78,6 +89,7 @@ export interface Database {
       wines: { Row: WineRow; Insert: WineInsert; Update: Partial<WineInsert>; Relationships: [] }
       inventory: { Row: InventoryRow; Insert: InventoryInsert; Update: Partial<InventoryInsert>; Relationships: [] }
       tastings: { Row: TastingRow; Insert: TastingInsert; Update: Partial<TastingInsert>; Relationships: [] }
+      wine_barcodes: { Row: WineBarcodeRow; Insert: WineBarcodeInsert; Update: Partial<WineBarcodeInsert>; Relationships: [] }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -86,4 +98,4 @@ export interface Database {
   }
 }
 
-export type { InventoryInsert, TastingInsert, WineInsert }
+export type { InventoryInsert, TastingInsert, WineBarcodeInsert, WineInsert }
