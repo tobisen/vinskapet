@@ -58,6 +58,12 @@ export const normalizeSearchText = (value: string): string => value
 
 export const normalizeProductNumber = (value: string): string => value.replace(/\D/g, '')
 
+export interface WineSearchHints {
+  name: string
+  producer?: string
+  productNumber?: string
+}
+
 function unique<T>(items: T[]): T[] {
   return [...new Set(items)]
 }
@@ -89,6 +95,27 @@ export function findCandidatePaths(paths: Iterable<string>, query: string, limit
 
 export function findCandidateUrls(sitemap: string, query: string, limit = 8): string[] {
   return findCandidatePaths([...sitemap.matchAll(PRODUCT_URL_PATTERN)].map((match) => match[0]), query, limit)
+}
+
+export function findWineCandidatePaths(paths: Iterable<string>, hints: WineSearchHints, limit = 10): string[] {
+  const allPaths = [...paths]
+  const words = (value?: string) => normalizeSearchText(value ?? '')
+    .split(' ')
+    .filter((word) => word.length > 2)
+  const candidates = [
+    ...(hints.productNumber ? findCandidatePaths(allPaths, hints.productNumber, 2) : []),
+    ...findCandidatePaths(allPaths, hints.name, 6),
+    ...(hints.producer ? findCandidatePaths(allPaths, hints.producer, 4) : []),
+    ...words(hints.producer).flatMap((word) => findCandidatePaths(allPaths, word, 2)),
+    ...words(hints.name).flatMap((word) => findCandidatePaths(allPaths, word, 2)),
+  ]
+
+  const seen = new Set<string>()
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate)) return false
+    seen.add(candidate)
+    return true
+  }).slice(0, limit)
 }
 
 function optionalString(value: unknown): string | undefined {

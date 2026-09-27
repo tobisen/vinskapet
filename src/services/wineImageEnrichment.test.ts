@@ -25,6 +25,14 @@ describe('wine image enrichment', () => {
     ])).toBeUndefined()
   })
 
+  it('accepts duplicate package variants and prefers the standard bottle', () => {
+    const result = findBestWineImage(wine, [
+      { source: 'SYSTEMBOLAGET', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED', imageUrl: 'https://img.test/large.png', productNumber: '1236602' },
+      { source: 'SYSTEMBOLAGET', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED', imageUrl: 'https://img.test/standard.png', productNumber: '1236601' },
+    ])
+    expect(result?.imageUrl).toBe('https://img.test/standard.png')
+  })
+
   it('persists a clear match and skips wines that already have an image', async () => {
     const search = vi.fn(async () => [{ source: 'SYSTEMBOLAGET', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED' as const, imageUrl: 'https://img.test/right.png', productNumber: '123' }])
     const update = vi.fn(async (_wine: Wine) => true)
@@ -35,5 +43,19 @@ describe('wine image enrichment', () => {
     expect(count).toBe(1)
     expect(search).toHaveBeenCalledOnce()
     expect(update.mock.calls[0]?.[0]).toMatchObject({ image: 'https://img.test/right.png', systembolagetProductNumber: '123' })
+  })
+
+  it('uses structured wine hints when the provider supports them', async () => {
+    const search = vi.fn(async () => [])
+    const searchWine = vi.fn(async () => [{
+      source: 'SYSTEMBOLAGET', producer: 'Luigi Righetti', name: 'Capitel de Roari',
+      wineType: 'RED' as const, imageUrl: 'https://img.test/roari.png', productNumber: '1236601',
+    }])
+    const update = vi.fn(async (_wine: Wine) => true)
+    const capitel = { ...wine, producer: 'Luigi Righetti', name: 'Capitel de’ Roari Amarone Classico' }
+
+    expect(await backfillMissingWineImages([capitel], { search, searchWine, getById: async () => null }, update)).toBe(1)
+    expect(searchWine).toHaveBeenCalledWith(capitel)
+    expect(search).not.toHaveBeenCalled()
   })
 })

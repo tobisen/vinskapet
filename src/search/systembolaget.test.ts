@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { findCandidateUrls, parseProductHtml, parseServingTemperature } from '../../supabase/functions/_shared/systembolaget'
+import { findCandidateUrls, findWineCandidatePaths, parseProductHtml, parseServingTemperature } from '../../supabase/functions/_shared/systembolaget'
 import { SystembolagetWineSearchProvider, normalizeProductNumber } from './SystembolagetWineSearchProvider'
 import { wineFromSearchResult } from './wineFromSearchResult'
 
@@ -27,6 +27,21 @@ describe('Systembolaget page parsing', () => {
 
     expect(findCandidateUrls(sitemap, '96 012')).toEqual(['https://www.systembolaget.se/produkt/vin/barolo-di-serralunga-9601201/'])
     expect(findCandidateUrls(sitemap, 'Barolo Serralunga')).toHaveLength(2)
+  })
+
+  it('combines name and producer candidates for image backfill', () => {
+    const paths = [
+      '/produkt/vin/capitel-de-roari-1236601/',
+      '/produkt/vin/1909-righetti-7630801/',
+      '/produkt/vin/amarone-classico-7654301/',
+    ]
+    expect(findWineCandidatePaths(paths, {
+      name: 'Capitel de’ Roari Amarone Classico',
+      producer: 'Luigi Righetti',
+    })).toEqual(expect.arrayContaining([
+      'https://www.systembolaget.se/produkt/vin/capitel-de-roari-1236601/',
+      'https://www.systembolaget.se/produkt/vin/1909-righetti-7630801/',
+    ]))
   })
 
   it('maps product metadata, image and price without inventing values', () => {
@@ -66,6 +81,15 @@ describe('Systembolaget provider', () => {
     await expect(provider.search('Barolo')).rejects.toThrow('Systembolaget search failed')
     expect(onError).toHaveBeenCalledOnce()
     expect(await provider.lookupBarcode('7350000000000')).toEqual([])
+  })
+
+  it('sends structured wine hints for image enrichment', async () => {
+    const invoke = vi.fn(async () => ({ data: { results: [] }, error: null }))
+    const provider = new SystembolagetWineSearchProvider(invoke)
+    await provider.searchWine({ name: 'Barbaresco', producer: 'Prunotto', systembolagetProductNumber: '50814' })
+    expect(invoke).toHaveBeenCalledWith('systembolaget-search', {
+      body: { wine: { name: 'Barbaresco', producer: 'Prunotto', productNumber: '50814' } },
+    })
   })
 })
 

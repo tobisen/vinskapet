@@ -1,6 +1,10 @@
 import type { Wine } from '@/types/domain'
 import type { WineSearchProvider, WineSearchResult } from '@/types/search'
 
+interface WineImageSearchProvider extends WineSearchProvider {
+  searchWine?: (wine: Pick<Wine, 'name' | 'producer' | 'systembolagetProductNumber'>) => Promise<WineSearchResult[]>
+}
+
 const ignoredTokens = new Set(['de', 'del', 'della', 'di', 'du', 'la', 'le', 'les', 'the', 'vin', 'wine'])
 
 function normalize(value?: string): string {
@@ -26,10 +30,11 @@ function coverage(expected?: string, actual?: string): number {
 export function scoreWineImageCandidate(wine: Wine, result: WineSearchResult): number {
   if (!result.imageUrl || (result.wineType && result.wineType !== wine.wineType)) return -1
   const nameCoverage = coverage(wine.name, result.name)
-  if (nameCoverage < 0.6) return -1
+  const producerCoverage = coverage(wine.producer, result.producer)
+  const minimumNameCoverage = producerCoverage >= 0.5 ? 0.5 : 0.6
+  if (nameCoverage < minimumNameCoverage) return -1
 
   let score = nameCoverage * 8
-  const producerCoverage = coverage(wine.producer, result.producer)
   if (wine.producer.trim()) {
     if (producerCoverage === 0) return -1
     score += producerCoverage * 5
@@ -44,20 +49,34 @@ export function findBestWineImage(wine: Wine, results: WineSearchResult[]): Wine
   const ranked = results
     .map((result) => ({ result, score: scoreWineImageCandidate(wine, result) }))
     .filter(({ score }) => score >= 7)
-    .sort((a, b) => b.score - a.score)
-  if (!ranked[0] || (ranked[1] && ranked[0].score - ranked[1].score < 1.5)) return undefined
+    .sort((a, b) => {
+      const scoreDifference = b.score - a.score
+      if (scoreDifference) return scoreDifference
+      return Number(b.result.productNumber?.endsWith('01')) - Number(a.result.productNumber?.endsWith('01'))
+    })
+  if (!ranked[0]) return undefined
+  if (ranked[1] && ranked[0].score - ranked[1].score < 1.5) {
+    const firstProducer = normalize(ranked[0].result.producer)
+    const sameProduct = Boolean(firstProducer)
+      && normalize(ranked[0].result.name) === normalize(ranked[1].result.name)
+      && firstProducer === normalize(ranked[1].result.producer)
+    if (!sameProduct) return undefined
+  }
   return ranked[0].result
 }
 
 export async function backfillMissingWineImages(
   wines: readonly Wine[],
-  provider: WineSearchProvider,
+  provider: WineImageSearchProvider,
   updateWine: (wine: Wine) => Promise<boolean>,
 ): Promise<number> {
   let updated = 0
   for (const wine of wines.filter((item) => !item.image)) {
     try {
-      const match = findBestWineImage(wine, await provider.search(wine.name))
+      const results = provider.searchWine
+        ? await provider.searchWine(wine)
+        : await provider.search(wine.name)
+      const match = findBestWineImage(wine, results)
       if (!match?.imageUrl) continue
       const saved = await updateWine({
         ...wine,

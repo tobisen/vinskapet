@@ -1,11 +1,17 @@
 import type { WineSearchProvider, WineSearchResult } from '@/types/search'
+import type { Wine } from '@/types/domain'
 import { isValidEan, normalizeEan } from '@/utils/barcode'
 
 interface SearchResponse {
   results: WineSearchResult[]
 }
 
-type InvokeFunction = (name: string, options: { body: { query: string } }) => Promise<{ data: SearchResponse | null; error: unknown }>
+interface SearchBody {
+  query?: string
+  wine?: { name: string, producer?: string, productNumber?: string }
+}
+
+type InvokeFunction = (name: string, options: { body: SearchBody }) => Promise<{ data: SearchResponse | null; error: unknown }>
 
 export const normalizeProductNumber = (value: string): string => value.replace(/\D/g, '')
 
@@ -35,6 +41,23 @@ export class SystembolagetWineSearchProvider implements WineSearchProvider {
 
   async getById(productNumber: string): Promise<WineSearchResult | null> {
     return this.getByProductNumber(productNumber)
+  }
+
+  async searchWine(wine: Pick<Wine, 'name' | 'producer' | 'systembolagetProductNumber'>): Promise<WineSearchResult[]> {
+    const { data, error } = await this.invoke('systembolaget-search', {
+      body: {
+        wine: {
+          name: wine.name,
+          producer: wine.producer,
+          productNumber: wine.systembolagetProductNumber,
+        },
+      },
+    })
+    if (error) {
+      this.onError?.()
+      throw new Error('Systembolaget wine search failed', { cause: error })
+    }
+    return Array.isArray(data?.results) ? data.results.filter(isWineSearchResult) : []
   }
 
   async getByProductNumber(productNumber: string): Promise<WineSearchResult | null> {

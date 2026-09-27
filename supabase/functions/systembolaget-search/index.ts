@@ -1,5 +1,5 @@
 import wineIndex from '../_shared/systembolaget-wine-index.json' with { type: 'json' }
-import { findCandidatePaths, findCandidateUrls, normalizeProductNumber, parseProductHtml, type SystembolagetResult } from '../_shared/systembolaget.ts'
+import { findCandidatePaths, findCandidateUrls, findWineCandidatePaths, normalizeProductNumber, parseProductHtml, type SystembolagetResult, type WineSearchHints } from '../_shared/systembolaget.ts'
 
 const SITEMAP_URL = 'https://www.systembolaget.se/sitemap-produkter-vin.xml'
 const USER_AGENT = 'Vinskapet/0.1 (private, on-demand product lookup)'
@@ -75,19 +75,34 @@ Deno.serve(async (request) => {
   if (rateLimited(authorization.slice(-32))) return json({ error: 'För många sökningar. Vänta en minut och försök igen.' }, 429)
 
   let query = ''
+  let wine: WineSearchHints | undefined
   try {
-    const body = await request.json() as { query?: unknown }
+    const body = await request.json() as { query?: unknown, wine?: Record<string, unknown> }
     query = typeof body.query === 'string' ? body.query.trim().slice(0, 100) : ''
+    if (body.wine && typeof body.wine.name === 'string') {
+      wine = {
+        name: body.wine.name.trim().slice(0, 100),
+        producer: typeof body.wine.producer === 'string' ? body.wine.producer.trim().slice(0, 100) : undefined,
+        productNumber: typeof body.wine.productNumber === 'string' ? body.wine.productNumber.trim().slice(0, 30) : undefined,
+      }
+    }
   } catch {
     return json({ error: 'Invalid JSON' }, 400)
   }
-  if (query.length < 2) return json({ results: [] })
+  if (query.length < 2 && (!wine || wine.name.length < 2)) return json({ results: [] })
 
   try {
-    let urls = findCandidatePaths(wineIndex.paths, query)
-    if (!urls.length) urls = findCandidateUrls(await getSitemap(), query)
+    let urls = wine
+      ? findWineCandidatePaths(wineIndex.paths, wine)
+      : findCandidatePaths(wineIndex.paths, query)
+    if (!urls.length) {
+      const sitemap = await getSitemap()
+      urls = wine
+        ? findWineCandidatePaths([...sitemap.matchAll(/https:\/\/www\.systembolaget\.se\/produkt\/vin\/[a-z0-9%_-]+-\d+\//gi)].map((match) => match[0]), wine)
+        : findCandidateUrls(sitemap, query)
+    }
     const products = (await Promise.all(urls.map((url) => getProduct(url)))).filter((product): product is SystembolagetResult => product !== null)
-    const productNumber = normalizeProductNumber(query)
+    const productNumber = normalizeProductNumber(wine?.productNumber ?? query)
     if (productNumber.length >= 5) {
       products.sort((a, b) => Number(b.productNumber === productNumber) - Number(a.productNumber === productNumber))
     }
