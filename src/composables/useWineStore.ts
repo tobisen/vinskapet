@@ -1,8 +1,8 @@
 import { computed, readonly, ref } from 'vue'
 import { repositories } from '@/services/repository'
 import type { AppData, ConsumeInput, Inventory, InventoryInput, Wine } from '@/types/domain'
-import type { WineEnrichmentReport, WineEnrichmentService } from '@/types/search'
-import { enrichWineRecord } from '@/services/wineEnrichment'
+import type { WineEnrichmentReport, WineEnrichmentService, WineEnrichmentStatus } from '@/types/search'
+import { enrichWineRecord, WineEnrichmentUnavailableError } from '@/services/wineEnrichment'
 import { buildWineSummaries, calculateBottleCount, calculateCollectionValue } from '@/utils/wine'
 import { logDevelopmentError } from '@/utils/log'
 
@@ -14,6 +14,7 @@ const loadError = ref('')
 const operationError = ref('')
 const pendingAction = ref<string>()
 const notice = ref('')
+const enrichmentStatuses = ref<Record<string, WineEnrichmentStatus>>({})
 
 async function fetchData(): Promise<void> {
   const [wines, inventory, tastings] = await Promise.all([
@@ -45,6 +46,7 @@ function clearData(): void {
   loadError.value = ''
   operationError.value = ''
   pendingAction.value = undefined
+  enrichmentStatuses.value = {}
 }
 
 function announce(message: string): void {
@@ -90,28 +92,45 @@ export function useWineStore() {
     }, 'Vinet har lagts till', 'Kunde inte spara vinet. Försök igen.')
   }
 
-  async function updateWine(wine: Wine): Promise<boolean> {
+  async function updateWine(wine: Wine, options: { silent?: boolean } = {}): Promise<boolean> {
+    if (options.silent) {
+      try {
+        const updated = await repositories.wines.updateWine(wine)
+        data.value = { ...data.value, wines: data.value.wines.map((item) => item.id === updated.id ? updated : item) }
+        return true
+      } catch (error) {
+        logDevelopmentError('Silent wine update failed', error)
+        return false
+      }
+    }
     return mutate('update-wine', async () => {
       await repositories.wines.updateWine(wine)
     }, 'Ändringarna är sparade', 'Kunde inte spara vinet. Försök igen.')
   }
 
-  async function enrichWine(wineId: string, service: WineEnrichmentService): Promise<WineEnrichmentReport | undefined> {
-    operationError.value = ''
-    pendingAction.value = 'enrich-wine'
+  async function enrichWine(
+    wineId: string,
+    service: WineEnrichmentService,
+    options: { silent?: boolean } = {},
+  ): Promise<WineEnrichmentReport | undefined> {
+    if (!options.silent) operationError.value = ''
+    enrichmentStatuses.value = { ...enrichmentStatuses.value, [wineId]: 'PENDING' }
     try {
       const wine = data.value.wines.find((item) => item.id === wineId)
       if (!wine) throw new Error('Wine not found')
       const report = await enrichWineRecord(wine, service, (updated) => repositories.wines.updateWine(updated))
-      await fetchData()
-      if (report.completedFields.length) announce('Vinets metadata har kompletterats')
+      if (report.completedFields.length) await fetchData()
+      enrichmentStatuses.value = { ...enrichmentStatuses.value, [wineId]: 'SUCCEEDED' }
+      if (!options.silent && report.completedFields.length) announce('Vinets metadata har kompletterats')
+      if (!options.silent && report.lowConfidence) operationError.value = 'Bedömningen var för osäker och sparades inte.'
       return report
     } catch (error) {
       logDevelopmentError('Wine enrichment failed', error)
-      operationError.value = 'Kunde inte komplettera vinets metadata.'
+      enrichmentStatuses.value = { ...enrichmentStatuses.value, [wineId]: 'FAILED' }
+      if (!options.silent) operationError.value = error instanceof WineEnrichmentUnavailableError
+        ? error.message
+        : 'Kunde inte komplettera vinets metadata.'
       return undefined
-    } finally {
-      pendingAction.value = undefined
     }
   }
 
@@ -138,6 +157,12 @@ export function useWineStore() {
     }, 'Flaskan är registrerad som drucken', 'Kunde inte registrera flaskan som drucken.')
   }
 
+  async function removeBottle(wineId: string): Promise<boolean> {
+    return mutate('remove-bottle', async () => {
+      await repositories.inventory.removeBottle(wineId)
+    }, 'En flaska har tagits bort', 'Kunde inte minska antalet flaskor. Försök igen.')
+  }
+
   async function addToWishlist(wineId: string): Promise<boolean> {
     return mutate('add-wishlist', async () => {
       await repositories.wines.addToWishlist(wineId)
@@ -153,8 +178,8 @@ export function useWineStore() {
   return {
     data: readonly(data), loading: readonly(loading), initialized: readonly(initialized),
     loadError: readonly(loadError), operationError: readonly(operationError), pendingAction: readonly(pendingAction),
-    isSaving, notice: readonly(notice), summaries, inStock, wishlist, bottleCount, collectionValue,
+    isSaving, notice: readonly(notice), enrichmentStatuses: readonly(enrichmentStatuses), summaries, inStock, wishlist, bottleCount, collectionValue,
     getWine, getInventory, getTastings, loadData, clearData, createWine, updateWine, enrichWine,
-    addInventory, correctInventory, consumeBottle, addToWishlist, removeFromWishlist,
+    addInventory, correctInventory, consumeBottle, removeBottle, addToWishlist, removeFromWishlist,
   }
 }

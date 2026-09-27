@@ -9,6 +9,7 @@ export interface WineRepository {
   getInventory(wineId?: string): Inventory[]
   addInventory(wineId: string, input: InventoryInput): Inventory
   updateInventory(item: Inventory): Inventory
+  removeBottle(wineId: string, inventoryId?: string): Inventory
   consumeBottle(wineId: string, input: ConsumeInput): Tasting
   getTastings(wineId?: string): Tasting[]
   createTasting(tasting: Tasting): Tasting

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Wine } from '@/types/domain'
+import { getDrinkingGuidance } from '@/utils/wine'
 
 const props = defineProps<{ wine: Wine }>()
 
@@ -26,11 +27,13 @@ const rows = computed(() => [
   { label: 'Druvor', value: props.wine.grapes.join(', ') },
   { label: 'Passar till', value: props.wine.foodPairings.join(', ') },
 ].filter((row) => row.value))
+const guidance = computed(() => getDrinkingGuidance(props.wine))
 </script>
 
 <template>
   <section class="serving-guide" aria-label="Serveringsguide">
     <div v-for="row in rows" :key="row.label"><span>{{ row.label }}</span><strong>{{ row.value }}</strong></div>
+    <p v-if="guidance" class="serving-guide__guidance">{{ guidance }}</p>
     <p v-if="!rows.length">Serveringsdetaljer saknas för det här vinet.</p>
   </section>
 </template>

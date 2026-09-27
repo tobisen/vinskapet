@@ -71,8 +71,14 @@ describe('Systembolaget provider', () => {
 
 describe('external purchase mapping', () => {
   it('stores Systembolaget price as reference price only', () => {
-    const wine = wineFromSearchResult({ source: 'SYSTEMBOLAGET', producer: 'Luigi Pira', name: 'Barolo', wineType: 'RED', referencePrice: 416 })
+    const wine = wineFromSearchResult({
+      source: 'SYSTEMBOLAGET', producer: 'Luigi Pira', name: 'Barolo', wineType: 'RED',
+      referencePrice: 416, storagePotential: 'HIGH', drinkingWindowStart: 2028,
+      drinkingWindowEnd: 2040, optimalDrinkingStart: 2030, optimalDrinkingEnd: 2038,
+    })
     expect(wine.referencePrice).toBe(416)
+    expect(wine.optimalDrinkingStart).toBe(2030)
+    expect(wine.storagePotential).toBe('HIGH')
     expect(wine).not.toHaveProperty('purchasePrice')
   })
 })

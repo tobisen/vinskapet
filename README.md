@@ -100,10 +100,12 @@ Streckkodsläsaren fungerar därför fortsatt som läsare och leder vidare till 
 eller manuell registrering när koden saknar lokal koppling. Den föreslagna, ej
 körda barcode-migrationen finns i [`docs/smart-add-research.md`](docs/smart-add-research.md).
 
-Wine-metadata kan kompletteras i efterhand utan att skriva över befintliga värden.
-Det säkra Edge Function-upplägget och det förberedda batchflödet beskrivs i
-[`docs/wine-enrichment.md`](docs/wine-enrichment.md). Ingen extern AI-provider är
-aktiverad.
+Wine-metadata kompletteras i bakgrunden efter att ett nytt vin sparats eller
+manuellt från vindetaljen. `LocalWineEnrichmentProvider` använder lokala,
+deterministiska regler och fyller bara tomma fält. Provider-arkitekturen, reglerna,
+valideringen och batchflödet beskrivs i
+[`docs/wine-enrichment.md`](docs/wine-enrichment.md). Enrichment kräver ingen
+API-nyckel, gör inga externa enrichment-anrop och har 0 SEK i extern API-kostnad.
 
 ## Scripts
 
@@ -121,6 +123,7 @@ npm run preview     # Förhandsvisa produktionsbygget
 - `src/types` innehåller domänmodeller för vin, lager och provningar.
 - `src/types/database.ts` innehåller separata typer för databasens snake_case-rader.
 - `src/utils` innehåller rena och testbara domänfunktioner för status, statistik, filtrering, sortering och gruppering.
+- `src/domain/enrichment` innehåller den lokala regelmotorn för vinmetadata.
 - `src/repositories` mappar databasrader och kapslar alla Supabase-frågor.
 - `src/composables` exponerar reaktiv appdata och samordnar mutationer.
 - `src/services/supabase.ts` skapar appens enda Supabase-klient.

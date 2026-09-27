@@ -16,6 +16,7 @@ import type { InventoryInput, WineType } from '@/types/domain'
 import type { WineSearchResult } from '@/types/search'
 import { formatCurrency } from '@/utils/format'
 import { supabase } from '@/services/supabase'
+import { wineEnrichmentService } from '@/services/wineEnrichment'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,7 +94,10 @@ async function addExternalPurchase(input: InventoryInput): Promise<void> {
     createWine: store.createWine,
     addInventory: store.addInventory,
   })
-  if (saved.saved) await router.push(`/wine/${saved.wineId}`)
+  if (saved.saved) {
+    if (!duplicate) void store.enrichWine(saved.wineId, wineEnrichmentService, { silent: true })
+    await router.push(`/wine/${saved.wineId}`)
+  }
 }
 </script>
 

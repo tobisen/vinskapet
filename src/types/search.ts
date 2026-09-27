@@ -22,6 +22,11 @@ export interface WineSearchResult {
   servingTemperatureMax?: number
   foodPairings?: string[]
   description?: string
+  storagePotential?: Wine['storagePotential']
+  drinkingWindowStart?: number
+  drinkingWindowEnd?: number
+  optimalDrinkingStart?: number
+  optimalDrinkingEnd?: number
   existingWine?: Wine
   quantity?: number
 }
@@ -45,13 +50,19 @@ export interface WineEnrichment {
   servingTemperatureMax?: number
   foodPairings?: string[]
   description?: string
+  confidence?: number
+  reasoningSummary?: string
+  ruleIds?: string[]
 }
 
 export interface WineEnrichmentService {
+  readonly assessmentSource?: string
   enrich(wine: WineCandidate): Promise<WineEnrichment>
 }
 
-export type WineEnrichmentField = keyof WineEnrichment
+export type WineEnrichmentStatus = 'IDLE' | 'PENDING' | 'SUCCEEDED' | 'FAILED'
+
+export type WineEnrichmentField = Exclude<keyof WineEnrichment, 'confidence' | 'reasoningSummary' | 'ruleIds'>
 
 export interface WineEnrichmentReport {
   wineId: string
@@ -59,6 +70,8 @@ export interface WineEnrichmentReport {
   missingBefore: WineEnrichmentField[]
   completedFields: WineEnrichmentField[]
   missingAfter: WineEnrichmentField[]
+  confidence?: number
+  lowConfidence: boolean
 }
 
 export interface WineLabelRecognitionService {

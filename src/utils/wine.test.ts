@@ -8,6 +8,8 @@ import {
   calculateBottleCount,
   calculateCollectionValue,
   filterWines,
+  getDrinkingGuidance,
+  getDrinkingPeriod,
   getDrinkingStatus,
   getStorageRecommendation,
   groupWinesByCountry,
@@ -32,6 +34,17 @@ describe('drinking status', () => {
   it('turns status into a storage recommendation', () => {
     expect(getStorageRecommendation(barbaresco, new Date('2026-06-01'))).toBe('Bör lagras i vinskåp')
     expect(getStorageRecommendation(barbaresco, new Date('2036-06-01'))).toBe('Ingen längre lagring nödvändig')
+  })
+
+  it('provides neutral guidance from the assessed windows', () => {
+    expect(getDrinkingGuidance(barbaresco, new Date('2027-06-01'))).toBe('Kan drickas nu. Bedömd optimal period börjar 2029.')
+    expect(getDrinkingGuidance(barbaresco, new Date('2030-06-01'))).toBe('Vinet är inom sin bedömda optimala period.')
+    expect(getDrinkingGuidance(barbaresco, new Date('2035-06-01'))).toBe('Prioritera gärna denna flaska inom drickfönstret.')
+  })
+
+  it('classifies the cellar by optimal start before the wider drinking window', () => {
+    expect(getDrinkingPeriod(barbaresco, new Date('2026-06-01'))).toBe('2027–2029')
+    expect(getDrinkingPeriod({ ...barbaresco, optimalDrinkingStart: undefined, optimalDrinkingEnd: undefined }, new Date('2027-06-01'))).toBe('Drick nu')
   })
 })
 

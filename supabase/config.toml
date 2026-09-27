@@ -1,2 +1,5 @@
 [functions.systembolaget-search]
 verify_jwt = true
+
+[functions.enrich-wine]
+verify_jwt = true

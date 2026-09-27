@@ -1,65 +1,73 @@
-# Wine metadata enrichment
+# Lokal Wine Enrichment
 
-No external enrichment provider or AI call is enabled yet.
+Vinskåpet kompletterar vinmetadata med en lokal, deterministisk regelmotor. Den
+kräver ingen API-nyckel, gör inga anrop till AI- eller vin-API:er och har ingen
+usage-baserad kostnad. Systembolaget-sökningen är en separat integration.
 
-## Recommended architecture
+## Prioritet och säkerhet
 
-1. The signed-in Vue client invokes a Supabase Edge Function named `enrich-wine`.
-2. The request contains a `WineCandidate`, never inventory or tasting data.
-3. Supabase validates the user's JWT. The function should also use user-scoped auth
-   and rate limiting.
-4. The external provider key is stored as an Edge Function secret and is never
-   returned to or bundled with the Vue application.
-5. The function validates the provider's structured JSON and returns only the
-   fields defined by `WineEnrichment`.
-6. `mergeWineEnrichment` fills empty fields only. The repository persists the
-   resulting Wine; metadata is never copied into tasting rows.
+Datakällor prioriteras i denna ordning:
 
-Supabase's current guidance is to keep JWT verification enabled for functions
-invoked by signed-in users. `supabase.functions.invoke` sends the session JWT.
-Project-wide provider credentials belong in Edge Function secrets.
+1. manuellt angivna värden
+2. verifierade Systembolaget-värden
+3. importerade värden
+4. lokala regler
 
-- https://supabase.com/docs/guides/functions/auth
-- https://supabase.com/docs/guides/functions/secrets
+`LocalWineEnrichmentProvider` returnerar bara metadata som saknas.
+`mergeWineEnrichment` gör samma kontroll en andra gång före lagring och validerar
+att drickfönster, optimal period och temperaturintervall är rimliga. Inventory och
+tastings läses eller ändras aldrig av enrichment-flödet.
 
-## Function contract
+När lokala regler faktiskt fyller minst ett fält sätts
+`assessment_source = "Local rules"` om posten saknar källa, samt
+`assessment_updated_at`. Befintlig provenance skrivs inte över. Regel-ID:n som
+`NEBBIOLO_SERVING`, `NEBBIOLO_APPELLATION_GRAPE` och
+`DRINKING_WINDOW_OPTIMAL_VERY_LONG` används för tester och felsökning men sparas
+inte i databasen.
 
-Request:
+## Regelstruktur
 
-```json
-{ "wine": { "source": "COLLECTION", "name": "Barbaresco", "vintage": 2020 } }
+Reglerna ligger i `src/domain/enrichment`:
+
+- `grapeRules.ts` gör endast konservativa druvslutsatser från tydliga namn eller appellationer.
+- `servingTemperatureRules.ts` väljer intervall från druva, appellation, stil och vintyp.
+- `foodPairingRules.ts` ger korta, generella matkategorier.
+- `drinkingWindowRules.ts` använder `DRINK_YOUNG`, `SHORT`, `MEDIUM`, `LONG` och `VERY_LONG`.
+- `LocalWineEnrichmentProvider.ts` samordnar reglerna och returnerar strukturerad `WineEnrichment`.
+
+Ett dokumenterat drickfönster behålls alltid. Om optimal period saknas beräknas
+den inom det dokumenterade drickfönstret. Om hela fönstret saknas används en bred,
+konservativ uppskattning från årgång och stil. Osäkra druvor lämnas tomma och
+reglerna skapar aldrig en beskrivning.
+
+## Nya viner
+
+När ett vin läggs till via Systembolaget sparas först all verifierad produktdata.
+Därefter kör Vue-klienten den lokala providern och uppdaterar endast tomma Wine-fält.
+Det kräver inget nätverksanrop utöver den vanliga Supabase-lagringen.
+
+Provider-gränssnittet finns kvar för framtida alternativ. Edge Function
+`enrich-wine` använder samma lokala regler, har ingen extern provider och behöver
+inga secrets. Batchscriptet kör regelmotorn direkt lokalt och använder Supabase
+endast för användarautentiserad läsning och lagring.
+
+## Befintlig samling
+
+```bash
+npm run metadata:audit
+npm run metadata:enrich
 ```
 
-Response:
+Båda kommandona autentiserar den aktuella användaren med tillfälliga
+`IMPORT_USER_EMAIL` och `IMPORT_USER_PASSWORD` i ignorerade `.env.local`.
+Audit-läget visar antal viner och saknade fält utan att ändra data. Enrichment
+kräver den uttryckliga bekräftelsen i npm-scriptet, läser om varje post före
+uppdatering och fyller bara fält som fortfarande är tomma. Scriptet rör inte
+inventory eller tastings och rapporterar före/efter för druvor, optimal period,
+servering och matmatchning.
 
-```json
-{
-  "enrichment": {
-    "grapes": ["Nebbiolo"],
-    "storagePotential": "HIGH",
-    "optimalDrinkingStart": 2028,
-    "optimalDrinkingEnd": 2032,
-    "servingTemperatureMin": 16,
-    "servingTemperatureMax": 18,
-    "foodPairings": ["Nötkött", "lamm", "svamp", "lagrade ostar"],
-    "description": "..."
-  }
-}
-```
+## Kostnad
 
-The function should return evidence/source metadata in a later contract revision
-before automated writes are approved. Responses must be schema validated, bounded
-to sensible years and temperatures, and rejected when product identity is uncertain.
-
-## Existing collection
-
-`npm run metadata:audit` authenticates as the current user, reads only `wines` and
-reports missing fields. It does not call the Edge Function.
-
-`npm run metadata:enrich` is prepared for a later approved run. It calls
-`enrich-wine`, patches only fields that were empty, and reports before/completed/after
-for every Wine. It never reads or writes `inventory` or `tastings`.
-
-Both commands use temporary `IMPORT_USER_EMAIL` and `IMPORT_USER_PASSWORD` values
-from the ignored `.env.local`, following the same one-off authentication pattern as
-the collection import.
+Enrichment använder inte OpenAI, betald AI, betalt wine API eller någon API-nyckel.
+Den gör inga externa enrichment-anrop. Extern API-kostnad för enrichment är
+**0 SEK**.

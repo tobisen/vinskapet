@@ -77,6 +77,15 @@ export class LocalStorageWineRepository implements WineRepository {
     return item
   }
 
+  removeBottle(wineId: string, inventoryId?: string): Inventory {
+    const candidates = this.getInventory(wineId).filter((item) => item.quantity > 0)
+    const inventory = inventoryId
+      ? candidates.find((item) => item.id === inventoryId)
+      : candidates.sort((a, b) => (a.purchaseDate ?? '').localeCompare(b.purchaseDate ?? ''))[0]
+    if (!inventory) throw new Error('Det finns ingen flaska kvar att ta bort.')
+    return this.updateInventory({ ...inventory, quantity: inventory.quantity - 1 })
+  }
+
   consumeBottle(wineId: string, input: ConsumeInput): Tasting {
     const data = this.read()
     const candidates = data.inventory.filter((item) => item.wineId === wineId && item.quantity > 0)

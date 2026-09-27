@@ -41,6 +41,16 @@ describe('LocalStorageWineRepository', () => {
     expect(repository.getTastings()).toHaveLength(tastingCount)
   })
 
+  it('removes one bottle without creating a tasting', () => {
+    const wineId = 'prunotto-barbaresco-2020'
+    const before = repository.getInventory(wineId).reduce((sum, item) => sum + item.quantity, 0)
+    const tastingCount = repository.getTastings(wineId).length
+    repository.removeBottle(wineId)
+    const after = repository.getInventory(wineId).reduce((sum, item) => sum + item.quantity, 0)
+    expect(after).toBe(before - 1)
+    expect(repository.getTastings(wineId)).toHaveLength(tastingCount)
+  })
+
   it('turns a manually emptied inventory into retained history', () => {
     const item = repository.getInventory('prunotto-barbaresco-2020')[0]!
     repository.updateInventory({ ...item, quantity: 0 })

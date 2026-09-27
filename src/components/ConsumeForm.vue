@@ -5,7 +5,7 @@ import { todayIso } from '@/utils/format'
 import WineServingGuide from './WineServingGuide.vue'
 
 const props = withDefaults(defineProps<{ wine: Wine; saving?: boolean }>(), { saving: false })
-const emit = defineEmits<{ submit: [input: ConsumeInput] }>()
+const emit = defineEmits<{ submit: [input: ConsumeInput]; decrement: [] }>()
 const date = ref(todayIso())
 const rating = ref<Tasting['rating']>()
 const review = ref('')
@@ -28,5 +28,6 @@ function save(): void {
     <fieldset class="choice-field"><legend>Köp igen? <small>valfritt</small></legend><div class="segmented"><button type="button" :class="{ selected: buyAgain === 'YES' }" @click="buyAgain = 'YES'">Ja</button><button type="button" :class="{ selected: buyAgain === 'MAYBE' }" @click="buyAgain = 'MAYBE'">Kanske</button><button type="button" :class="{ selected: buyAgain === 'NO' }" @click="buyAgain = 'NO'">Nej</button></div></fieldset>
     <p class="form-hint">Betyg och omdöme kan hoppas över.</p>
     <button class="button button-primary button-block" type="submit" :disabled="props.saving">{{ props.saving ? 'Sparar…' : 'Registrera som drucken' }}</button>
+    <button class="button button-secondary button-block" type="button" :disabled="props.saving" @click="emit('decrement')">Minska med en utan smaknotering</button>
   </form>
 </template>

@@ -14,6 +14,8 @@ export const enrichmentFields: WineEnrichmentField[] = [
   'description',
 ]
 
+export const minimumEnrichmentConfidence = 0.65
+
 const isMissing = (value: unknown): boolean => value == null || value === '' || (Array.isArray(value) && value.length === 0)
 const isStringList = (value: unknown): value is string[] => Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string' && item.trim().length > 0)
 const isYear = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 1900 && Number(value) <= 2200
@@ -22,7 +24,8 @@ const isTemperature = (value: unknown): value is number => typeof value === 'num
 export function isWineEnrichment(value: unknown): value is WineEnrichment {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const record = value as Record<string, unknown>
-  if (!Object.keys(record).every((key) => enrichmentFields.includes(key as WineEnrichmentField))) return false
+  const allowedFields = [...enrichmentFields, 'confidence', 'reasoningSummary', 'ruleIds']
+  if (!Object.keys(record).every((key) => allowedFields.includes(key as WineEnrichmentField))) return false
 
   for (const [field, fieldValue] of Object.entries(record)) {
     if (fieldValue == null) continue
@@ -30,13 +33,26 @@ export function isWineEnrichment(value: unknown): value is WineEnrichment {
     if (field === 'storagePotential' && !['LOW', 'MEDIUM', 'HIGH'].includes(String(fieldValue))) return false
     if (['drinkingWindowStart', 'drinkingWindowEnd', 'optimalDrinkingStart', 'optimalDrinkingEnd'].includes(field) && !isYear(fieldValue)) return false
     if (['servingTemperatureMin', 'servingTemperatureMax'].includes(field) && !isTemperature(fieldValue)) return false
-    if (field === 'description' && (typeof fieldValue !== 'string' || !fieldValue.trim() || fieldValue.length > 2000)) return false
+    if (field === 'description' && (typeof fieldValue !== 'string' || !fieldValue.trim() || fieldValue.length > 600)) return false
+    if (field === 'confidence' && (typeof fieldValue !== 'number' || fieldValue < 0 || fieldValue > 1)) return false
+    if (field === 'reasoningSummary' && (typeof fieldValue !== 'string' || !fieldValue.trim() || fieldValue.length > 500)) return false
+    if (field === 'ruleIds' && (!isStringList(fieldValue) || fieldValue.some((item) => !/^[A-Z0-9_]+$/.test(item)))) return false
   }
 
   const typed = record as WineEnrichment
   if (typed.drinkingWindowStart && typed.drinkingWindowEnd && typed.drinkingWindowStart > typed.drinkingWindowEnd) return false
   if (typed.optimalDrinkingStart && typed.optimalDrinkingEnd && typed.optimalDrinkingStart > typed.optimalDrinkingEnd) return false
+  if (typed.drinkingWindowStart && typed.optimalDrinkingStart && typed.drinkingWindowStart > typed.optimalDrinkingStart) return false
+  if (typed.optimalDrinkingEnd && typed.drinkingWindowEnd && typed.optimalDrinkingEnd > typed.drinkingWindowEnd) return false
   if (typed.servingTemperatureMin != null && typed.servingTemperatureMax != null && typed.servingTemperatureMin > typed.servingTemperatureMax) return false
+  return true
+}
+
+function hasValidWindows(wine: Wine): boolean {
+  if (wine.drinkingWindowStart && wine.drinkingWindowEnd && wine.drinkingWindowStart > wine.drinkingWindowEnd) return false
+  if (wine.optimalDrinkingStart && wine.optimalDrinkingEnd && wine.optimalDrinkingStart > wine.optimalDrinkingEnd) return false
+  if (wine.drinkingWindowStart && wine.optimalDrinkingStart && wine.drinkingWindowStart > wine.optimalDrinkingStart) return false
+  if (wine.optimalDrinkingEnd && wine.drinkingWindowEnd && wine.optimalDrinkingEnd > wine.drinkingWindowEnd) return false
   return true
 }
 
@@ -53,13 +69,16 @@ export function mergeWineEnrichment(
   const missingBefore = getMissingEnrichmentFields(wine)
   const next = { ...wine }
   const completedFields: WineEnrichmentField[] = []
+  const lowConfidence = enrichment.confidence != null && enrichment.confidence < minimumEnrichmentConfidence
 
-  for (const field of missingBefore) {
+  for (const field of lowConfidence ? [] : missingBefore) {
     const value = enrichment[field]
     if (isMissing(value)) continue
     Object.assign(next, { [field]: value })
     completedFields.push(field)
   }
+
+  if (!hasValidWindows(next)) throw new Error('Enrichment skapar ett ogiltigt drickfönster.')
 
   if (completedFields.length) {
     next.assessmentSource = wine.assessmentSource ?? source
@@ -75,6 +94,8 @@ export function mergeWineEnrichment(
       missingBefore,
       completedFields,
       missingAfter: getMissingEnrichmentFields(next),
+      confidence: enrichment.confidence,
+      lowConfidence,
     },
   }
 }

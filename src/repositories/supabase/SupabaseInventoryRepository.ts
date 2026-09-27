@@ -56,6 +56,32 @@ export class SupabaseInventoryRepository {
     await Promise.all(items.map((item, index) => this.updateInventory({ ...item, quantity: index === 0 ? totalQuantity : 0 })))
   }
 
+  async removeBottle(wineId: string, inventoryId?: string): Promise<Inventory> {
+    const { data: rows, error: loadError } = await supabase
+      .from('inventory')
+      .select('*')
+      .eq('wine_id', wineId)
+      .gt('quantity', 0)
+      .order('purchase_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true })
+    if (loadError) throw new RepositoryError('Kunde inte läsa lagersaldot.', loadError)
+
+    const selected = inventoryId
+      ? rows.find((row) => row.id === inventoryId)
+      : selectFifoInventory(rows)
+    if (!selected) throw new RepositoryError('Det finns ingen flaska kvar att ta bort.')
+
+    const { data: updated, error: updateError } = await supabase
+      .from('inventory')
+      .update({ quantity: selected.quantity - 1, updated_at: new Date().toISOString() })
+      .eq('id', selected.id)
+      .eq('quantity', selected.quantity)
+      .select('*')
+      .maybeSingle()
+    if (updateError || !updated) throw new RepositoryError('Lagersaldot ändrades av en annan operation. Försök igen.', updateError)
+    return inventoryRowToDomain(updated)
+  }
+
   async consumeBottle(wineId: string, input: ConsumeInput): Promise<Tasting> {
     const userId = await requireUserId()
     const { data: rows, error: loadError } = await supabase

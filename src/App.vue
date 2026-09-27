@@ -5,14 +5,37 @@ import AppHeader from '@/components/AppHeader.vue'
 import BottomNav from '@/components/BottomNav.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useWineStore } from '@/composables/useWineStore'
+import { SystembolagetWineSearchProvider } from '@/search/SystembolagetWineSearchProvider'
+import { supabase } from '@/services/supabase'
+import { backfillMissingWineImages } from '@/services/wineImageEnrichment'
 
 const auth = useAuth()
 const store = useWineStore()
 const route = useRoute()
+const imageProvider = new SystembolagetWineSearchProvider(
+  (name, options) => supabase.functions.invoke(name, options),
+)
+let imageBackfillStarted = false
 
 watch(() => auth.user.value, async (user) => {
-  if (user) await store.loadData()
-  else store.clearData()
+  if (user) {
+    await store.loadData()
+    if (!imageBackfillStarted) {
+      imageBackfillStarted = true
+      void backfillMissingWineImages(
+        store.data.value.wines.map((wine) => ({
+          ...wine,
+          grapes: [...wine.grapes],
+          foodPairings: [...wine.foodPairings],
+        })),
+        imageProvider,
+        (wine) => store.updateWine(wine, { silent: true }),
+      )
+    }
+  } else {
+    imageBackfillStarted = false
+    store.clearData()
+  }
 }, { immediate: true })
 </script>
 

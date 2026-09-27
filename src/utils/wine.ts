@@ -62,6 +62,22 @@ export function getStorageRecommendation(wine: Wine, currentDate = new Date()): 
   return 'Lagring rekommenderas'
 }
 
+export function getDrinkingGuidance(wine: Wine, currentDate = new Date()): string {
+  const year = currentDate.getFullYear()
+  const { optimalDrinkingStart: optimalStart, optimalDrinkingEnd: optimalEnd, drinkingWindowStart, drinkingWindowEnd } = wine
+  if (optimalStart != null && year < optimalStart) {
+    if (drinkingWindowStart == null || year >= drinkingWindowStart) return `Kan drickas nu. Bedömd optimal period börjar ${optimalStart}.`
+    return `Bedömd drickperiod börjar ${drinkingWindowStart}. Optimal period börjar ${optimalStart}.`
+  }
+  if (optimalStart != null && optimalEnd != null && year >= optimalStart && year <= optimalEnd) {
+    return 'Vinet är inom sin bedömda optimala period.'
+  }
+  if (drinkingWindowEnd != null && year >= drinkingWindowEnd - 1) {
+    return 'Prioritera gärna denna flaska inom drickfönstret.'
+  }
+  return ''
+}
+
 export function calculateDrinkingPlan(wines: WineSummary[], currentDate = new Date()) {
   const counts = { ready: 0, soon: 0, waiting: 0 }
   for (const wine of wines) {
@@ -167,9 +183,10 @@ export function sortWines(wines: WineSummary[], sort: WineSort, now = new Date()
 }
 
 export function getDrinkingPeriod(wine: Wine, now = new Date()): string {
-  const status = getDrinkingStatus(wine, now)
-  if (status !== 'WAIT') return 'Drick nu'
-  const start = wine.drinkingWindowStart ?? now.getFullYear()
+  const year = now.getFullYear()
+  const start = wine.optimalDrinkingStart ?? wine.drinkingWindowStart ?? year
+  const end = wine.optimalDrinkingEnd ?? wine.drinkingWindowEnd
+  if (start <= year || (end != null && end < year)) return 'Drick nu'
   if (start <= 2029) return '2027–2029'
   if (start <= 2034) return '2030–2034'
   return '2035+'
