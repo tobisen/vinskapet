@@ -13,7 +13,7 @@ import { SystembolagetWineSearchProvider } from '@/search/SystembolagetWineSearc
 import { wineFromSearchResult } from '@/search/wineFromSearchResult'
 import { repositories } from '@/services/repository'
 import { supabase } from '@/services/supabase'
-import { BarcodeLookupService, saveBarcodePurchase, type BarcodeLookupResult } from '@/services/barcodeLookup'
+import { BarcodeLookupService, saveBarcodePurchase, type BarcodeDebugEntry, type BarcodeLookupResult } from '@/services/barcodeLookup'
 import { wineEnrichmentService } from '@/services/wineEnrichment'
 import type { InventoryInput, WineBarcodeSource, WineType } from '@/types/domain'
 import type { WineSearchResult } from '@/types/search'
@@ -37,12 +37,17 @@ const confirmedVintage = ref<number>()
 const confirmedWineType = ref<WineType>()
 const withoutVintage = ref(false)
 const mappingSource = ref<WineBarcodeSource>('MANUAL')
+const debugEntries = ref<BarcodeDebugEntry[]>([])
 let controls: IScannerControls | undefined
 let handled = false
 
 const systembolaget = new SystembolagetWineSearchProvider((name, options) => supabase.functions.invoke(name, options))
 const openFoodFacts = new OpenFoodFactsBarcodeSearchProvider((name, options) => supabase.functions.invoke(name, options))
-const lookup = new BarcodeLookupService(repositories.barcodes, (id) => store.getWine(id), systembolaget, openFoodFacts)
+function recordDebug(entry: BarcodeDebugEntry): void {
+  debugEntries.value = [...debugEntries.value, entry]
+  console.info(`[barcode:${entry.stage}] ${entry.message}`, entry.details ?? '')
+}
+const lookup = new BarcodeLookupService(repositories.barcodes, (id) => store.getWine(id), systembolaget, openFoodFacts, recordDebug)
 const codeFormat = computed(() => code.value ? eanFormat(code.value) : null)
 const existingWine = computed(() => match.value?.existingWine ?? (match.value ? findDuplicateWine(match.value, store.summaries.value) : undefined))
 const existingQuantity = computed(() => existingWine.value ? store.getWine(existingWine.value.id)?.quantity ?? 0 : 0)
@@ -64,6 +69,7 @@ async function identifyBarcode(value: string): Promise<void> {
   const normalized = normalizeEan(value)
   if (!isValidEan(normalized)) return
   handled = true
+  debugEntries.value = []
   code.value = normalized
   stopCamera()
   navigator.vibrate?.(70)
@@ -143,10 +149,12 @@ async function saveMatch(input: InventoryInput): Promise<void> {
       addInventory: store.addInventory,
     })
   } catch {
+    recordDebug({ stage: 'MAPPING', message: 'Vinet sparades men EAN-kopplingen misslyckades.' })
     selectionError.value = 'Vinet sparades, men streckkodskopplingen kunde inte sparas.'
     return
   }
   if (!saved.saved) return
+  recordDebug({ stage: 'MAPPING', message: 'EAN-kopplingen sparades.', details: { barcode: code.value, wineId: saved.wineId, source: mappingSource.value } })
   if (!duplicate) void store.enrichWine(saved.wineId, wineEnrichmentService, { silent: true })
   await router.push(`/wine/${saved.wineId}`)
 }
@@ -156,6 +164,7 @@ function resetScanner(): void {
   manualCode.value = ''
   match.value = undefined
   lookupStatus.value = undefined
+  debugEntries.value = []
   handled = false
   void startCamera()
 }
@@ -198,6 +207,7 @@ onBeforeUnmount(stopCamera)
       <div v-else-if="lookupStatus === 'ERROR'" class="scanner-no-match"><CameraOff :size="30" aria-hidden="true" /><h2>Sökningen kunde inte genomföras</h2><p>Streckkoden är kvar. Försök igen eller sök fram vinet manuellt.</p><RouterLink class="button button-primary" :to="searchTarget"><Search :size="18" /> Sök efter vinet</RouterLink></div>
       <div v-else class="scanner-no-match"><CameraOff :size="30" aria-hidden="true" /><h2>Vi hittade inte vinet automatiskt.</h2><p>Streckkoden är kvar. Sök fram rätt vin och koppla den för nästa scanning.</p><RouterLink class="button button-primary" :to="searchTarget"><Search :size="18" /> Sök efter vinet</RouterLink><RouterLink class="button button-secondary" :to="manualTarget">Lägg till manuellt</RouterLink></div>
       <button class="text-button" type="button" @click="resetScanner"><ArrowLeft :size="17" /> Skanna igen</button>
+      <details v-if="debugEntries.length" class="barcode-debug"><summary>EAN-diagnostik</summary><ol><li v-for="(entry, index) in debugEntries" :key="`${entry.stage}-${index}`"><strong>{{ entry.stage }}</strong><span>{{ entry.message }}</span><code v-if="entry.details">{{ JSON.stringify(entry.details) }}</code></li></ol></details>
     </section>
 
     <section v-if="!code" class="scanner-manual">

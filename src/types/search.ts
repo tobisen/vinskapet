@@ -35,6 +35,7 @@ export interface WineSearchProvider {
   search(query: string): Promise<WineSearchResult[]>
   getById(id: string): Promise<WineSearchResult | null>
   lookupBarcode?(barcode: string): Promise<WineSearchResult[]>
+  searchWine?(wine: Pick<Wine, 'name' | 'producer' | 'systembolagetProductNumber'>): Promise<WineSearchResult[]>
 }
 
 export type WineCandidate = Omit<WineSearchResult, 'existingWine' | 'quantity'>

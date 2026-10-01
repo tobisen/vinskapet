@@ -10,6 +10,55 @@ export type BarcodeLookupResult =
   | { status: 'OFFLINE'; barcode: string }
   | { status: 'ERROR'; barcode: string }
 
+export type BarcodeDebugStage = 'INPUT' | 'LOCAL' | 'OPEN_FOOD_FACTS' | 'SYSTEMBOLAGET' | 'RESULT' | 'MAPPING'
+
+export interface BarcodeDebugEntry {
+  stage: BarcodeDebugStage
+  message: string
+  details?: unknown
+}
+
+export function shouldRunBarcodeLookup(barcode: string, query: string): boolean {
+  return Boolean(barcode) && !query.trim()
+}
+
+type BarcodeDebug = (entry: BarcodeDebugEntry) => void
+
+const normalizeText = (value?: string): string => (value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLocaleLowerCase('sv-SE')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim()
+
+const tokens = (value?: string): string[] => normalizeText(value).split(' ').filter((token) => token.length > 2)
+
+function tokenCoverage(expected?: string, actual?: string): number {
+  const expectedTokens = tokens(expected)
+  if (!expectedTokens.length) return 0
+  const actualTokens = new Set(tokens(actual))
+  return expectedTokens.filter((token) => actualTokens.has(token)).length / expectedTokens.length
+}
+
+export function evaluateSystembolagetBarcodeCandidate(
+  source: WineSearchResult,
+  candidate: WineSearchResult,
+): { accepted: boolean; reason: string; score: number } {
+  if (source.wineType && candidate.wineType && source.wineType !== candidate.wineType) {
+    return { accepted: false, reason: 'Vintypen skiljer sig.', score: -1 }
+  }
+  const nameCoverage = tokenCoverage(source.name, candidate.name)
+  const producerCoverage = source.producer
+    ? Math.max(tokenCoverage(source.producer, candidate.producer), tokenCoverage(source.producer, candidate.name))
+    : 0
+  if (nameCoverage < 0.5) return { accepted: false, reason: `För låg namnmatchning (${nameCoverage.toFixed(2)}).`, score: nameCoverage }
+  if (source.producer && producerCoverage < 0.5) {
+    return { accepted: false, reason: `För låg producentmatchning (${producerCoverage.toFixed(2)}).`, score: producerCoverage }
+  }
+  const score = nameCoverage * 7 + producerCoverage * 3
+  return { accepted: true, reason: `Namn ${nameCoverage.toFixed(2)}, producent ${producerCoverage.toFixed(2)}.`, score }
+}
+
 function toSearchResult(wine: WineSummary): WineSearchResult {
   return {
     externalId: wine.id, source: 'LOCAL_COLLECTION', producer: wine.producer, name: wine.name,
@@ -26,27 +75,73 @@ export class BarcodeLookupService {
     private readonly getWine: (id: string) => WineSummary | undefined,
     private readonly systembolaget: WineSearchProvider,
     private readonly fallback?: WineSearchProvider,
+    private readonly debug: BarcodeDebug = () => undefined,
   ) {}
 
   async lookup(value: string, online = true): Promise<BarcodeLookupResult> {
     const barcode = normalizeEan(value)
+    this.debug({ stage: 'INPUT', message: 'EAN mottagen och normaliserad.', details: { scanned: value, normalized: barcode } })
     if (!isValidEan(barcode)) throw new Error('Ogiltig EAN.')
     try {
       const mapping = await this.mappings.findByBarcode(barcode)
       const wine = mapping ? this.getWine(mapping.wineId) : undefined
-      if (wine) return { status: 'MATCH', barcode, result: toSearchResult(wine), source: 'LOCAL', mappingSource: mapping?.source }
-    } catch {
+      this.debug({ stage: 'LOCAL', message: mapping ? 'Lokal EAN-koppling hittades.' : 'Ingen lokal EAN-koppling.', details: mapping })
+      if (wine) {
+        this.debug({ stage: 'RESULT', message: 'Direktträff från wine_barcodes.', details: { wineId: wine.id, name: wine.name } })
+        return { status: 'MATCH', barcode, result: toSearchResult(wine), source: 'LOCAL', mappingSource: mapping?.source }
+      }
+      if (mapping && !wine) this.debug({ stage: 'LOCAL', message: 'EAN-kopplingen pekar på ett vin som inte är laddat.', details: mapping })
+    } catch (error) {
+      this.debug({ stage: 'LOCAL', message: 'Lokal EAN-sökning misslyckades.', details: error instanceof Error ? error.message : String(error) })
       if (!online) return { status: 'OFFLINE', barcode }
     }
     if (!online) return { status: 'OFFLINE', barcode }
 
     try {
       const systemMatch = (await this.systembolaget.lookupBarcode?.(barcode))?.[0]
-      if (systemMatch) return { status: 'MATCH', barcode, result: systemMatch, source: 'SYSTEMBOLAGET' }
-      const fallbackMatch = (await this.fallback?.lookupBarcode?.(barcode))?.[0]
-      if (fallbackMatch) return { status: 'MATCH', barcode, result: fallbackMatch, source: 'OPEN_FOOD_FACTS' }
+      if (systemMatch) {
+        this.debug({ stage: 'SYSTEMBOLAGET', message: 'Direkt EAN-träff hos Systembolaget.', details: systemMatch })
+        return { status: 'MATCH', barcode, result: systemMatch, source: 'SYSTEMBOLAGET' }
+      }
+      this.debug({ stage: 'SYSTEMBOLAGET', message: 'Systembolaget exponerar ingen verifierad direkt EAN-koppling.' })
+
+      const fallbackMatches = await this.fallback?.lookupBarcode?.(barcode) ?? []
+      const fallbackMatch = fallbackMatches[0]
+      this.debug({
+        stage: 'OPEN_FOOD_FACTS',
+        message: fallbackMatch ? 'Open Food Facts returnerade en vinprodukt.' : 'EAN saknas eller är inte klassad som vin i Open Food Facts.',
+        details: fallbackMatch ?? { barcode, matches: 0 },
+      })
+      if (fallbackMatch) {
+        const searchTerms = { producer: fallbackMatch.producer, name: fallbackMatch.name }
+        this.debug({ stage: 'SYSTEMBOLAGET', message: 'Söker Systembolaget med produkttext från Open Food Facts.', details: searchTerms })
+        let candidates: WineSearchResult[] = []
+        try {
+          candidates = this.systembolaget.searchWine
+            ? await this.systembolaget.searchWine({ ...searchTerms, producer: searchTerms.producer ?? '', systembolagetProductNumber: undefined })
+            : await this.systembolaget.search([searchTerms.producer, searchTerms.name].filter(Boolean).join(' '))
+        } catch (error) {
+          this.debug({ stage: 'SYSTEMBOLAGET', message: 'Textmatchningen hos Systembolaget misslyckades; Open Food Facts-träffen behålls.', details: error instanceof Error ? error.message : String(error) })
+        }
+        const evaluated = candidates.map((candidate) => ({ candidate, ...evaluateSystembolagetBarcodeCandidate(fallbackMatch, candidate) }))
+          .sort((a, b) => b.score - a.score)
+        this.debug({
+          stage: 'SYSTEMBOLAGET',
+          message: `${candidates.length} kandidater utvärderades.`,
+          details: evaluated.map(({ candidate, accepted, reason }) => ({ productNumber: candidate.productNumber, name: candidate.name, producer: candidate.producer, accepted, reason })),
+        })
+        const matched = evaluated.find((candidate) => candidate.accepted)?.candidate
+        if (matched) {
+          this.debug({ stage: 'RESULT', message: 'Verifierad Systembolaget-kandidat vald.', details: matched })
+          return { status: 'MATCH', barcode, result: matched, source: 'SYSTEMBOLAGET' }
+        }
+        this.debug({ stage: 'RESULT', message: 'Open Food Facts-träffen används utan Systembolaget-match.', details: fallbackMatch })
+        return { status: 'MATCH', barcode, result: fallbackMatch, source: 'OPEN_FOOD_FACTS' }
+      }
+      this.debug({ stage: 'RESULT', message: 'Ingen extern EAN-träff. Manuell vinsökning krävs.' })
       return { status: 'UNKNOWN', barcode }
-    } catch {
+    } catch (error) {
+      this.debug({ stage: 'RESULT', message: 'Extern EAN-sökning misslyckades tekniskt.', details: error instanceof Error ? error.message : String(error) })
       return { status: 'ERROR', barcode }
     }
   }

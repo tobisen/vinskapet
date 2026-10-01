@@ -1553,6 +1553,36 @@ p {
   justify-self: center;
   color: #fff;
 }
+.barcode-debug {
+  width: 100%;
+  color: #d8d1d4;
+  text-align: left;
+}
+.barcode-debug summary {
+  padding: 10px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+.barcode-debug ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+.barcode-debug li {
+  display: grid;
+  gap: 3px;
+}
+.barcode-debug strong {
+  color: #dfadb9;
+  font-size: 0.7rem;
+}
+.barcode-debug code {
+  overflow-wrap: anywhere;
+  color: #aaa2a6;
+  font-size: 0.67rem;
+  white-space: pre-wrap;
+}
 .scanner-no-match,
 .scanner-match {
   display: grid;
@@ -1651,6 +1681,37 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+.label-debug {
+  width: 100%;
+  padding: 10px 0;
+  color: #c8c1c4;
+}
+.label-debug summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.label-debug pre {
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.label-debug ul {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.label-debug li {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 12px;
+}
+.label-debug li > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .label-actions .text-link,
 .label-results > .text-button {

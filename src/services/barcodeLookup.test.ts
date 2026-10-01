@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { WineBarcodeRepository } from '@/repositories/WineBarcodeRepository'
 import type { WineBarcode, WineBarcodeSource, WineSummary } from '@/types/domain'
 import type { WineSearchProvider, WineSearchResult } from '@/types/search'
-import { BarcodeLookupService, saveBarcodePurchase } from './barcodeLookup'
+import { BarcodeLookupService, evaluateSystembolagetBarcodeCandidate, saveBarcodePurchase, shouldRunBarcodeLookup } from './barcodeLookup'
 
 const EAN = '4006381333931'
 const wine: WineSummary = {
@@ -49,6 +49,28 @@ describe('BarcodeLookupService', () => {
     const match = { source: 'OPEN_FOOD_FACTS', producer: 'Test', name: 'Wine' }
     const result = await new BarcodeLookupService(new MemoryBarcodeRepository(), () => undefined, provider(), provider([match])).lookup(EAN)
     expect(result).toMatchObject({ status: 'MATCH', source: 'OPEN_FOOD_FACTS' })
+  })
+
+  it('matches an Open Food Facts wine to a compatible Systembolaget product', async () => {
+    const openFoodFacts = { source: 'OPEN_FOOD_FACTS', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED' as const }
+    const systemMatch = { source: 'SYSTEMBOLAGET', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED' as const, productNumber: '2201301' }
+    const system: WineSearchProvider = {
+      search: async () => [], getById: async () => null, lookupBarcode: async () => [], searchWine: async () => [systemMatch],
+    }
+    const result = await new BarcodeLookupService(new MemoryBarcodeRepository(), () => undefined, system, provider([openFoodFacts])).lookup(EAN)
+    expect(result).toMatchObject({ status: 'MATCH', source: 'SYSTEMBOLAGET', result: systemMatch })
+  })
+
+  it('explains why a Systembolaget candidate is rejected', () => {
+    expect(evaluateSystembolagetBarcodeCandidate(
+      { source: 'OPEN_FOOD_FACTS', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED' },
+      { source: 'SYSTEMBOLAGET', producer: 'Other', name: 'Riesling', wineType: 'WHITE' },
+    )).toMatchObject({ accepted: false, reason: 'Vintypen skiljer sig.' })
+  })
+
+  it('switches from automatic EAN lookup to text search when the user types', () => {
+    expect(shouldRunBarcodeLookup(EAN, '')).toBe(true)
+    expect(shouldRunBarcodeLookup(EAN, 'Barbaresco')).toBe(false)
   })
 
   it('returns unknown after local, Systembolaget and fallback misses', async () => {

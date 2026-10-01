@@ -6,6 +6,12 @@ export interface LabelRecognitionProgress {
   status: string
 }
 
+export interface LabelSearchDebug {
+  queries: string[]
+  searches: Array<{ query: string; matches: number; error?: string }>
+  candidates: Array<{ name: string; producer?: string; productNumber?: string; score: number; accepted: boolean; reason: string }>
+}
+
 const ignoredLines = new Set([
   'alc', 'alcohol', 'bottled by', 'contains sulfites', 'contient des sulfites',
   'mis en bouteille', 'product of', 'produced by', 'vino', 'vin', 'wine',
@@ -39,6 +45,15 @@ export function extractLabelSearchQueries(text: string, limit = 5): string[] {
     .slice(0, limit)
 }
 
+export function buildLabelSearchQueries(text: string, limit = 6): string[] {
+  const lines = extractLabelSearchQueries(text)
+  const combined = lines.slice(0, 3).flatMap((line, index) => {
+    const next = lines[index + 1]
+    return next ? [`${line} ${next}`] : []
+  })
+  return [...new Set([...combined, ...lines])].slice(0, limit)
+}
+
 export function scoreLabelResult(text: string, result: WineSearchResult): number {
   const recognized = new Set(tokens(text))
   const identity = [...new Set(tokens(`${result.producer ?? ''} ${result.name}`))]
@@ -49,13 +64,32 @@ export function scoreLabelResult(text: string, result: WineSearchResult): number
 export async function searchRecognizedLabel(
   text: string,
   provider: WineSearchProvider,
+  onDebug?: (debug: LabelSearchDebug) => void,
 ): Promise<WineSearchResult[]> {
-  const queries = extractLabelSearchQueries(text)
+  const queries = buildLabelSearchQueries(text)
   const settled = await Promise.allSettled(queries.map((query) => provider.search(query)))
-  return mergeSearchResults(settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []))
+  const searches = settled.map((result, index) => result.status === 'fulfilled'
+    ? { query: queries[index] ?? '', matches: result.value.length }
+    : { query: queries[index] ?? '', matches: 0, error: result.reason instanceof Error ? result.reason.message : String(result.reason) })
+  const candidates = mergeSearchResults(settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []))
     .map((result) => ({ result, score: scoreLabelResult(text, result) }))
-    .filter(({ result, score }) => Boolean(result.imageUrl) && score >= 0.34)
     .sort((a, b) => b.score - a.score)
+
+  onDebug?.({
+    queries,
+    searches,
+    candidates: candidates.map(({ result, score }) => ({
+      name: result.name,
+      producer: result.producer,
+      productNumber: result.productNumber,
+      score,
+      accepted: score >= 0.34,
+      reason: score >= 0.34 ? 'Tillräcklig textmatchning.' : `För låg textmatchning (${score.toFixed(2)}).`,
+    })),
+  })
+
+  return candidates
+    .filter(({ score }) => score >= 0.34)
     .slice(0, 8)
     .map(({ result }) => result)
 }

@@ -42,16 +42,28 @@ Deno.serve(async (request) => {
   }
   if (!validEan(barcode)) return json({ error: 'Ogiltig EAN.' }, 400)
 
+  console.info('barcode-lookup input', { barcode })
+
   try {
     const fields = 'code,product_name,product_name_sv,brands,countries,categories_tags,image_front_url,image_url'
     const response = await fetch(`https://world.openfoodfacts.org/api/v3/product/${barcode}?fields=${fields}`, {
       headers: { 'User-Agent': 'Vinskapet/0.1 (https://github.com/tobisen/vinskapet)' },
       signal: AbortSignal.timeout(10_000),
     })
-    if (response.status === 404) return json({ result: null })
+    if (response.status === 404) {
+      console.info('barcode-lookup Open Food Facts miss', { barcode, status: response.status })
+      return json({ result: null })
+    }
     if (!response.ok) return json({ error: `Open Food Facts returned ${response.status}` }, 502)
     const payload = await response.json() as { product?: Record<string, unknown> }
-    return json({ result: parseOpenFoodFactsProduct(payload, barcode) })
+    const result = parseOpenFoodFactsProduct(payload, barcode)
+    console.info('barcode-lookup Open Food Facts result', {
+      barcode,
+      matched: Boolean(result),
+      reason: payload.product && !result ? 'Product exists but is not a usable wine record.' : undefined,
+      product: result ? { name: result.name, producer: result.producer, wineType: result.wineType } : undefined,
+    })
+    return json({ result })
   } catch (error) {
     console.error('Open Food Facts lookup failed', error)
     return json({ error: 'Kunde inte slå upp streckkoden just nu.' }, 502)

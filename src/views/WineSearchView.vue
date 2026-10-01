@@ -20,6 +20,11 @@ import { supabase } from "@/services/supabase";
 import { wineEnrichmentService } from "@/services/wineEnrichment";
 import { repositories } from "@/services/repository";
 import { isValidEan, normalizeEan } from "@/utils/barcode";
+import { shouldRunBarcodeLookup } from "@/services/barcodeLookup";
+
+function debugBarcode(message: string, details?: unknown): void {
+  console.info(`[barcode:FALLBACK] ${message}`, details ?? "");
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -73,8 +78,9 @@ async function saveBarcodeMapping(
     await repositories.barcodes.addMapping(
       pendingBarcode.value,
       wineId,
-      source === "SYSTEMBOLAGET" ? "SYSTEMBOLAGET" : "MANUAL",
+      source === "SYSTEMBOLAGET" ? "SYSTEMBOLAGET" : source === "OPEN_FOOD_FACTS" ? "OPEN_FOOD_FACTS" : "MANUAL",
     );
+    debugBarcode("EAN↔Wine-koppling sparad.", { barcode: pendingBarcode.value, wineId, source });
     return true;
   } catch {
     selectionError.value =
@@ -90,12 +96,14 @@ watch(
     selected.value = undefined;
     externalError.value = false;
 
-    if (barcode) {
+    if (shouldRunBarcodeLookup(barcode, value)) {
       loading.value = true;
+      debugBarcode("Automatisk EAN-sökning från sökvyn.", { barcode });
       void (async () => {
         try {
           const matches = await provider.lookupBarcode(barcode);
           results.value = matches;
+          debugBarcode("EAN-sökning klar.", { matches: matches.length });
           searched.value = true;
         } catch {
           results.value = [];
@@ -115,6 +123,7 @@ watch(
       return;
     }
     loading.value = true;
+    debugBarcode("Manuell textsökning med bibehållen EAN.", { barcode, query: value.trim() });
     debounceTimer = setTimeout(async () => {
       const response = await latestSearch.search(value);
       if (response.stale) return;
