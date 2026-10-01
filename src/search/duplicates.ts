@@ -34,3 +34,45 @@ export async function saveWinePurchase(
   }
   return { saved: await actions.createWine(wine, inventory), wineId: wine.id }
 }
+
+export async function saveWineToWishlist(
+  wine: Wine,
+  existingWine: Wine | undefined,
+  actions: {
+    createWine: (wine: Wine) => Promise<boolean>
+    updateWine: (wine: Wine) => Promise<boolean>
+  },
+): Promise<{ saved: boolean; wineId: string; created: boolean; reason?: 'IN_COLLECTION' }> {
+  if (!existingWine) {
+    return { saved: await actions.createWine({ ...wine, status: 'WISHLIST' }), wineId: wine.id, created: true }
+  }
+
+  if (existingWine.status === 'COLLECTION') {
+    return { saved: false, wineId: existingWine.id, created: false, reason: 'IN_COLLECTION' }
+  }
+
+  const updated: Wine = {
+    ...existingWine,
+    country: existingWine.country ?? wine.country,
+    region: existingWine.region ?? wine.region,
+    appellation: existingWine.appellation ?? wine.appellation,
+    alcoholPercentage: existingWine.alcoholPercentage ?? wine.alcoholPercentage,
+    image: existingWine.image ?? wine.image,
+    systembolagetProductNumber: existingWine.systembolagetProductNumber ?? wine.systembolagetProductNumber,
+    systembolagetUrl: existingWine.systembolagetUrl ?? wine.systembolagetUrl,
+    referencePrice: existingWine.referencePrice ?? wine.referencePrice,
+    grapes: existingWine.grapes.length ? existingWine.grapes : wine.grapes,
+    storagePotential: existingWine.storagePotential ?? wine.storagePotential,
+    drinkingWindowStart: existingWine.drinkingWindowStart ?? wine.drinkingWindowStart,
+    drinkingWindowEnd: existingWine.drinkingWindowEnd ?? wine.drinkingWindowEnd,
+    optimalDrinkingStart: existingWine.optimalDrinkingStart ?? wine.optimalDrinkingStart,
+    optimalDrinkingEnd: existingWine.optimalDrinkingEnd ?? wine.optimalDrinkingEnd,
+    servingTemperatureMin: existingWine.servingTemperatureMin ?? wine.servingTemperatureMin,
+    servingTemperatureMax: existingWine.servingTemperatureMax ?? wine.servingTemperatureMax,
+    foodPairings: existingWine.foodPairings.length ? existingWine.foodPairings : wine.foodPairings,
+    description: existingWine.description ?? wine.description,
+    status: 'WISHLIST',
+    updatedAt: new Date().toISOString(),
+  }
+  return { saved: await actions.updateWine(updated), wineId: existingWine.id, created: false }
+}

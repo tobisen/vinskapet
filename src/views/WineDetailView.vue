@@ -3,9 +3,11 @@ import { computed, ref } from "vue";
 import {
   ArrowLeft,
   Edit3,
+  Heart,
   Image as ImageIcon,
   MinusCircle,
   Plus,
+  ShoppingBag,
   Sparkles,
   Star,
   Trash2,
@@ -74,6 +76,16 @@ const systembolagetProvider = new SystembolagetWineSearchProvider(
 async function add(input: InventoryInput): Promise<void> {
   if (!wine.value) return;
   if (await store.addInventory(wine.value.id, input)) modal.value = undefined;
+}
+
+async function addWishlist(): Promise<void> {
+  if (!wine.value || wine.value.status === "COLLECTION") return;
+  await store.addToWishlist(wine.value.id);
+}
+
+async function removeWishlist(): Promise<void> {
+  if (!wine.value) return;
+  if (await store.removeFromWishlist(wine.value.id)) await router.push("/wishlist");
 }
 
 async function consume(input: ConsumeInput): Promise<void> {
@@ -159,8 +171,8 @@ async function deleteWine(): Promise<void> {
 <template>
   <main v-if="wine" class="detail-page">
     <div class="detail-topbar">
-      <RouterLink class="back-link" to="/collection"
-        ><ArrowLeft :size="19" aria-hidden="true" /> Samling</RouterLink
+      <RouterLink class="back-link" :to="wine.status === 'WISHLIST' ? '/wishlist' : '/collection'"
+        ><ArrowLeft :size="19" aria-hidden="true" /> {{ wine.status === "WISHLIST" ? "Önskelista" : "Samling" }}</RouterLink
       >
       <div class="detail-topbar__actions">
         <RouterLink
@@ -215,7 +227,28 @@ async function deleteWine(): Promise<void> {
       </div>
     </header>
 
-    <div class="sticky-actions">
+    <div v-if="wine.status === 'WISHLIST'" class="sticky-actions">
+      <button class="button button-primary" type="button" @click="modal = 'add'">
+        <ShoppingBag :size="19" aria-hidden="true" /> Jag har köpt det
+      </button>
+      <button
+        class="button button-secondary"
+        type="button"
+        :disabled="store.isSaving.value"
+        @click="removeWishlist"
+      >
+        <Trash2 :size="19" aria-hidden="true" /> Ta bort från önskelistan
+      </button>
+    </div>
+    <div v-else-if="wine.status !== 'COLLECTION'" class="sticky-actions">
+      <button class="button button-primary" type="button" @click="modal = 'add'">
+        <Plus :size="19" aria-hidden="true" /> Lägg till i samlingen
+      </button>
+      <button class="button button-secondary" type="button" @click="addWishlist">
+        <Heart :size="19" aria-hidden="true" /> Lägg till i önskelistan
+      </button>
+    </div>
+    <div v-else class="sticky-actions">
       <button
         class="button button-primary"
         type="button"
@@ -327,7 +360,7 @@ async function deleteWine(): Promise<void> {
           Detaljerad vinmetadata saknas och kan kompletteras senare.
         </p>
       </section>
-      <section class="detail-section">
+      <section v-if="wine.status !== 'WISHLIST'" class="detail-section">
         <div class="section-heading">
           <h2>Mina flaskor</h2>
           <button class="text-button" type="button" @click="openCorrection">
@@ -406,9 +439,13 @@ async function deleteWine(): Promise<void> {
     /></ModalShell>
     <ModalShell
       v-if="modal === 'add'"
-      title="Lägg till flaskor"
+      :title="wine.status === 'WISHLIST' ? 'Jag har köpt det' : 'Lägg till flaskor'"
       @close="modal = undefined"
-      ><InventoryForm :saving="store.isSaving.value" @submit="add"
+      ><InventoryForm
+        :submit-label="wine.status === 'WISHLIST' ? 'Lägg till i samlingen' : 'Lägg till flaskor'"
+        :initial-price="wine.referencePrice"
+        :saving="store.isSaving.value"
+        @submit="add"
     /></ModalShell>
     <ModalShell
       v-if="modal === 'correct'"

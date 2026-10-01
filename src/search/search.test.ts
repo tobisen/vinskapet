@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Wine, WineSummary } from '@/types/domain'
 import type { WineSearchProvider } from '@/types/search'
 import { LatestWineSearch } from './LatestWineSearch'
 import { mergeSearchResults } from './CompositeWineSearchProvider'
 import { LocalCollectionWineSearchProvider } from './LocalCollectionWineSearchProvider'
-import { findDuplicateWine, saveWinePurchase } from './duplicates'
+import { findDuplicateWine, saveWinePurchase, saveWineToWishlist } from './duplicates'
 
 const wine: WineSummary = {
   id: 'deaetna', producer: 'Terra Costantino', name: 'DeAetna Rosso', vintage: 2023,
@@ -45,6 +45,50 @@ describe('duplicate matching', () => {
     expect(result).toEqual({ saved: true, wineId: 'deaetna' })
     expect(created).toBe(0)
     expect(inventoryAdded).toBe(1)
+  })
+
+  it('creates a wishlist wine without inventory', async () => {
+    const createWine = vi.fn(async () => true)
+    const updateWine = vi.fn(async () => true)
+    const wishlistWine = { ...wine, id: 'wishlist-wine', status: 'WISHLIST' as const }
+
+    const result = await saveWineToWishlist(wishlistWine, undefined, { createWine, updateWine })
+
+    expect(result).toEqual({ saved: true, wineId: 'wishlist-wine', created: true })
+    expect(createWine).toHaveBeenCalledWith(expect.objectContaining({ status: 'WISHLIST' }))
+    expect(updateWine).not.toHaveBeenCalled()
+  })
+
+  it('does not duplicate a collection wine on the wishlist', async () => {
+    const createWine = vi.fn(async () => true)
+    const updateWine = vi.fn(async () => true)
+
+    const result = await saveWineToWishlist({ ...wine, id: 'new-id', status: 'WISHLIST' }, wine, {
+      createWine,
+      updateWine,
+    })
+
+    expect(result).toEqual({ saved: false, wineId: wine.id, created: false, reason: 'IN_COLLECTION' })
+    expect(createWine).not.toHaveBeenCalled()
+    expect(updateWine).not.toHaveBeenCalled()
+  })
+
+  it('reuses an existing non-collection wine when adding it to the wishlist', async () => {
+    const historical = { ...wine, status: 'HISTORY_ONLY' as const, image: undefined }
+    const updateWine = vi.fn(async () => true)
+
+    const result = await saveWineToWishlist(
+      { ...wine, id: 'new-id', status: 'WISHLIST', image: 'https://example.test/bottle.png' },
+      historical,
+      { createWine: async () => true, updateWine },
+    )
+
+    expect(result).toEqual({ saved: true, wineId: wine.id, created: false })
+    expect(updateWine).toHaveBeenCalledWith(expect.objectContaining({
+      id: wine.id,
+      image: 'https://example.test/bottle.png',
+      status: 'WISHLIST',
+    }))
   })
 })
 

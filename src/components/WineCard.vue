@@ -7,6 +7,12 @@ import WineImage from "./WineImage.vue";
 import WineTypeBadge from "./WineTypeBadge.vue";
 
 defineProps<{ wine: WineSummary }>();
+
+const storagePotentialLabels: Record<NonNullable<WineSummary["storagePotential"]>, string> = {
+  LOW: "Kort lagring",
+  MEDIUM: "Medellång lagring",
+  HIGH: "Lång lagring",
+};
 </script>
 
 <template>
@@ -23,8 +29,7 @@ defineProps<{ wine: WineSummary }>();
       <div class="wine-card__top">
         <WineTypeBadge :type="wine.wineType" />
         <span class="wine-card__quantity"
-          >{{ wine.quantity }}
-          {{ wine.quantity === 1 ? "flaska" : "flaskor" }}</span
+          >{{ wine.status === "WISHLIST" ? "Önskelista" : `${wine.quantity} ${wine.quantity === 1 ? "flaska" : "flaskor"}` }}</span
         >
       </div>
       <div class="wine-card__body">
@@ -41,7 +46,7 @@ defineProps<{ wine: WineSummary }>();
         <span v-if="wine.grapes.length"> · {{ wine.grapes.join(", ") }}</span>
       </p>
       <div class="wine-card__meta">
-        <span>{{ formatCurrency(wine.averagePrice, wine.currency) }}/st</span>
+        <span>{{ formatCurrency(wine.averagePrice ?? wine.referencePrice, wine.currency) }}<template v-if="wine.averagePrice">/st</template></span>
         <span v-if="wine.storageLocations.length" class="wine-card__location">
           <MapPin :size="14" aria-hidden="true" />{{
             wine.storageLocations.length > 1
@@ -53,12 +58,15 @@ defineProps<{ wine: WineSummary }>();
         </span>
       </div>
       <div class="wine-card__footer">
-        <span v-if="wine.drinkingWindowStart || wine.drinkingWindowEnd">
-          Drick {{ wine.drinkingWindowStart ?? "nu" }}–{{
-            wine.drinkingWindowEnd ?? "vidare"
-          }}
+        <span>
+          <template v-if="wine.drinkingWindowStart || wine.drinkingWindowEnd">
+            Drick {{ wine.drinkingWindowStart ?? "nu" }}–{{ wine.drinkingWindowEnd ?? "vidare" }}
+          </template>
+          <template v-if="wine.storagePotential">
+            <span v-if="wine.drinkingWindowStart || wine.drinkingWindowEnd"> · </span>{{ storagePotentialLabels[wine.storagePotential] }}
+          </template>
+          <template v-if="!wine.drinkingWindowStart && !wine.drinkingWindowEnd && !wine.storagePotential">Drick- och lagringsinfo saknas</template>
         </span>
-        <span v-else>Drickfönster saknas</span>
         <DrinkingStatusBadge :wine="wine" />
       </div>
     </div>

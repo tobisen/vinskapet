@@ -151,4 +151,9 @@ describe('external purchase mapping', () => {
     expect(wineFromSearchResult(result, 2023).vintage).toBe(2023)
     expect(wineFromSearchResult(result, null).vintage).toBeUndefined()
   })
+
+  it('can map a search result directly to a wishlist wine', () => {
+    const result = { source: 'SYSTEMBOLAGET', producer: 'Luigi Pira', name: 'Barolo', wineType: 'RED' as const }
+    expect(wineFromSearchResult(result, 2023, 'RED', 'WISHLIST').status).toBe('WISHLIST')
+  })
 })

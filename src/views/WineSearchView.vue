@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { ArrowLeft, Search } from "@lucide/vue";
+import { ArrowLeft, Heart, Search } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import InventoryForm from "@/components/InventoryForm.vue";
 import WineImage from "@/components/WineImage.vue";
@@ -11,7 +11,11 @@ import { LatestWineSearch } from "@/search/LatestWineSearch";
 import { LocalCollectionWineSearchProvider } from "@/search/LocalCollectionWineSearchProvider";
 import { SystembolagetWineSearchProvider } from "@/search/SystembolagetWineSearchProvider";
 import { FreeBarcodeSearchProvider } from "@/search/FreeBarcodeSearchProvider";
-import { findDuplicateWine, saveWinePurchase } from "@/search/duplicates";
+import {
+  findDuplicateWine,
+  saveWinePurchase,
+  saveWineToWishlist,
+} from "@/search/duplicates";
 import { wineFromSearchResult } from "@/search/wineFromSearchResult";
 import type { InventoryInput, WineType } from "@/types/domain";
 import type { WineSearchResult } from "@/types/search";
@@ -44,6 +48,7 @@ const externalError = ref(false);
 const confirmedVintage = ref<number>();
 const confirmedWineType = ref<WineType>();
 const selectionError = ref("");
+const saveTarget = ref<"COLLECTION" | "WISHLIST">("COLLECTION");
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 const systembolagetProvider = new SystembolagetWineSearchProvider(
@@ -163,6 +168,17 @@ function selectResult(result: WineSearchResult): void {
   confirmedVintage.value = result.vintage;
   confirmedWineType.value = result.wineType;
   selectionError.value = "";
+  saveTarget.value = result.existingWine?.status === "WISHLIST" ? "WISHLIST" : "COLLECTION";
+}
+
+async function addExistingToWishlist(): Promise<void> {
+  const existing = selected.value?.existingWine;
+  if (!existing) return;
+  if (existing.status === "COLLECTION") {
+    selectionError.value = "Vinet finns redan i samlingen och läggs därför inte till på önskelistan.";
+    return;
+  }
+  if (await store.addToWishlist(existing.id)) await router.push(`/wine/${existing.id}`);
 }
 
 async function addExternalPurchase(input: InventoryInput): Promise<void> {
@@ -189,6 +205,38 @@ async function addExternalPurchase(input: InventoryInput): Promise<void> {
       void store.enrichWine(saved.wineId, wineEnrichmentService, {
         silent: true,
       });
+    await router.push(`/wine/${saved.wineId}`);
+  }
+}
+
+async function addExternalWishlist(): Promise<void> {
+  const result = selected.value;
+  if (!result || result.existingWine) return;
+  if (!result.producer || !confirmedWineType.value) {
+    selectionError.value =
+      "Producent och vintyp måste anges. Lägg till vinet manuellt om uppgifterna saknas.";
+    return;
+  }
+
+  const wine = wineFromSearchResult(
+    result,
+    confirmedVintage.value,
+    confirmedWineType.value,
+    "WISHLIST",
+  );
+  const duplicate = findDuplicateWine(result, store.summaries.value);
+  const saved = await saveWineToWishlist(wine, duplicate, {
+    createWine: store.createWine,
+    updateWine: store.updateWine,
+  });
+  if (saved.reason === "IN_COLLECTION") {
+    selectionError.value = "Vinet finns redan i samlingen och skapades inte på nytt.";
+    return;
+  }
+  if (saved.saved) {
+    if (!(await saveBarcodeMapping(saved.wineId, result.source))) return;
+    if (saved.created)
+      void store.enrichWine(saved.wineId, wineEnrichmentService, { silent: true });
     await router.push(`/wine/${saved.wineId}`);
   }
 }
@@ -225,7 +273,9 @@ async function addExternalPurchase(input: InventoryInput): Promise<void> {
           <ArrowLeft :size="17" /> Till resultat
         </button>
         <div>
-          <p class="eyebrow">Finns i samlingen</p>
+          <p class="eyebrow">
+            {{ selected.existingWine.status === "WISHLIST" ? "Finns på önskelistan" : "Finns i Vinskåpet" }}
+          </p>
           <h2>
             {{ selected.name }}
             <span v-if="selected.vintage">{{ selected.vintage }}</span>
@@ -239,12 +289,22 @@ async function addExternalPurchase(input: InventoryInput): Promise<void> {
           ><input v-model="linkBarcode" type="checkbox" /><span
             >Koppla denna streckkod till vinet</span
           ></label
-        ><InventoryForm
-          submit-label="Lägg till flaskor"
+        ><p v-if="selectionError" class="form-error" role="alert">{{ selectionError }}</p>
+        <InventoryForm
+          :submit-label="selected.existingWine.status === 'WISHLIST' ? 'Jag har köpt det' : 'Lägg till i samlingen'"
           :saving="store.isSaving.value"
           :initial-price="selected.referencePrice"
           @submit="addInventory"
         />
+        <button
+          v-if="selected.existingWine.status !== 'COLLECTION' && selected.existingWine.status !== 'WISHLIST'"
+          class="button button-secondary button-block"
+          type="button"
+          :disabled="store.isSaving.value"
+          @click="addExistingToWishlist"
+        >
+          <Heart :size="18" aria-hidden="true" /> Lägg till i önskelistan
+        </button>
       </div>
 
       <div v-else-if="selected" class="quick-add-panel external-wine-panel">
@@ -328,12 +388,39 @@ async function addExternalPurchase(input: InventoryInput): Promise<void> {
           ><input v-model="linkBarcode" type="checkbox" /><span
             >Koppla denna streckkod till vinet</span
           ></label
-        ><InventoryForm
+        >
+        <div class="segmented form-mode" aria-label="Välj vart vinet ska sparas">
+          <button
+            type="button"
+            :class="{ selected: saveTarget === 'COLLECTION' }"
+            @click="saveTarget = 'COLLECTION'"
+          >
+            Samlingen
+          </button>
+          <button
+            type="button"
+            :class="{ selected: saveTarget === 'WISHLIST' }"
+            @click="saveTarget = 'WISHLIST'"
+          >
+            Önskelistan
+          </button>
+        </div>
+        <InventoryForm
+          v-if="saveTarget === 'COLLECTION'"
           submit-label="Lägg till i samlingen"
           :saving="store.isSaving.value"
           :initial-price="selected.referencePrice"
           @submit="addExternalPurchase"
         />
+        <button
+          v-else
+          class="button button-primary button-block"
+          type="button"
+          :disabled="store.isSaving.value"
+          @click="addExternalWishlist"
+        >
+          <Heart :size="18" aria-hidden="true" /> Lägg till i önskelistan
+        </button>
       </div>
 
       <template v-else>
