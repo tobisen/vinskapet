@@ -122,6 +122,8 @@ export type WineSort =
   | 'WINDOW_START'
   | 'WINDOW_END'
 
+export type SortDirection = 'ASC' | 'DESC'
+
 export type GroupMode = 'NONE' | 'COUNTRY_REGION' | 'TYPE' | 'DRINKING_PERIOD' | 'STORAGE'
 
 export interface InventoryInput {

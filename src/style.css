@@ -510,6 +510,19 @@ p {
   font-size: 0.72rem;
   font-weight: 700;
 }
+.sort-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+}
+.sort-direction {
+  width: 40px;
+  height: 40px;
+  color: var(--wine);
+  background: #fff;
+}
 .sort-row select {
   min-width: 0;
   height: 40px;
@@ -1563,6 +1576,85 @@ p {
   color: #fff;
   background: transparent;
   border-color: rgb(255 255 255 / 45%);
+}
+
+.label-scanner-page {
+  padding: calc(78px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom));
+}
+.label-capture,
+.label-results {
+  width: min(560px, 100%);
+  margin-inline: auto;
+}
+.label-capture {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+.label-camera-button {
+  display: grid;
+  width: min(100%, 420px);
+  aspect-ratio: 4 / 5;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: #fff;
+  background: #282326;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 7px;
+}
+.label-preview {
+  display: block;
+  width: min(100%, 420px);
+  max-height: 52dvh;
+  object-fit: contain;
+  background: #080708;
+  border-radius: 7px;
+}
+.label-progress {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 7px;
+  color: #ddd7da;
+  text-align: center;
+  font-size: 0.82rem;
+}
+.label-progress progress {
+  width: 100%;
+  accent-color: #b43c5a;
+}
+.label-results {
+  display: grid;
+  gap: 18px;
+  padding-top: 20px;
+}
+.label-results .section-heading h1 {
+  color: #fff;
+  font-size: 1.35rem;
+}
+.label-results .section-heading span,
+.label-results .empty-state p {
+  color: #c8c1c4;
+}
+.label-results .search-results > button {
+  color: var(--ink);
+  background: #fff;
+}
+.label-results .empty-state {
+  color: #fff;
+}
+.label-results .empty-state h2 {
+  color: #fff;
+}
+.label-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.label-actions .text-link,
+.label-results > .text-button {
+  color: #fff;
 }
 .scanner-match span {
   color: #c8c1c4;

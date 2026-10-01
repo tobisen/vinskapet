@@ -7,6 +7,7 @@ import type {
   Wine,
   WineFilters,
   WineSort,
+  SortDirection,
   WineSummary,
   WineType,
 } from "@/types/domain";
@@ -235,17 +236,19 @@ const priority: Record<DrinkingStatus, number> = {
 export function sortWines(
   wines: WineSummary[],
   sort: WineSort,
+  direction: SortDirection = defaultSortDirection(sort),
   now = new Date(),
 ): WineSummary[] {
   const text = (value?: string) => value ?? "";
-  return [...wines].sort((a, b) => {
+  const multiplier = direction === "ASC" ? 1 : -1;
+  return [...wines].sort((a, b) => multiplier * (() => {
     switch (sort) {
       case "NAME":
         return text(a.name).localeCompare(text(b.name), "sv");
       case "PRODUCER":
         return text(a.producer).localeCompare(text(b.producer), "sv");
       case "VINTAGE":
-        return (b.vintage ?? 0) - (a.vintage ?? 0);
+        return (a.vintage ?? 0) - (b.vintage ?? 0);
       case "COUNTRY":
         return text(a.country).localeCompare(text(b.country), "sv");
       case "REGION":
@@ -256,12 +259,12 @@ export function sortWines(
           "sv",
         );
       case "PRICE":
-        return (b.averagePrice ?? 0) - (a.averagePrice ?? 0);
+        return (a.averagePrice ?? 0) - (b.averagePrice ?? 0);
       case "QUANTITY":
-        return b.quantity - a.quantity;
+        return a.quantity - b.quantity;
       case "PURCHASE_DATE":
-        return text(b.latestPurchaseDate).localeCompare(
-          text(a.latestPurchaseDate),
+        return text(a.latestPurchaseDate).localeCompare(
+          text(b.latestPurchaseDate),
         );
       case "WINDOW_START":
         return (
@@ -275,7 +278,11 @@ export function sortWines(
           priority[getDrinkingStatus(b, now)]
         );
     }
-  });
+  })());
+}
+
+export function defaultSortDirection(sort: WineSort): SortDirection {
+  return ["VINTAGE", "PRICE", "QUANTITY", "PURCHASE_DATE"].includes(sort) ? "DESC" : "ASC";
 }
 
 export function getDrinkingPeriod(wine: Wine, now = new Date()): string {

@@ -4,16 +4,17 @@ import { CircleDollarSign, GlassWater, LibraryBig, Search } from '@lucide/vue'
 import CollectionControls from '@/components/CollectionControls.vue'
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
-import type { GroupMode, WineFilters, WineSort } from '@/types/domain'
+import type { GroupMode, SortDirection, WineFilters, WineSort } from '@/types/domain'
 import { formatCurrency } from '@/utils/format'
 import { filterWines, groupWines, sortWines } from '@/utils/wine'
 
 const store = useWineStore()
 const filters = ref<WineFilters>({ query: '', wineType: 'ALL', country: '', region: '', vintage: 'ALL', drinkingStatus: 'ALL', storageLocation: 'ALL', availability: 'IN_STOCK' })
 const sort = ref<WineSort>('DRINK_PRIORITY')
+const direction = ref<SortDirection>('ASC')
 const group = ref<GroupMode>('NONE')
 const filtersExpanded = ref(false)
-const results = computed(() => sortWines(filterWines(store.summaries.value, filters.value), sort.value))
+const results = computed(() => sortWines(filterWines(store.summaries.value, filters.value), sort.value, direction.value))
 const groups = computed(() => groupWines(results.value, group.value))
 </script>
 
@@ -28,7 +29,7 @@ const groups = computed(() => groupWines(results.value, group.value))
       </div>
     </section>
 
-    <CollectionControls v-model:filters="filters" v-model:sort="sort" v-model:group="group" v-model:expanded="filtersExpanded" :wines="store.summaries.value" />
+    <CollectionControls v-model:filters="filters" v-model:sort="sort" v-model:direction="direction" v-model:group="group" v-model:expanded="filtersExpanded" :wines="store.summaries.value" />
     <div class="result-heading"><h2>{{ results.length }} {{ results.length === 1 ? 'vin' : 'viner' }}</h2></div>
     <div v-if="results.length" class="wine-groups">
       <section v-for="[title, wines] in groups" :key="title" class="wine-group">

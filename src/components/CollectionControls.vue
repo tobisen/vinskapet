@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Filter, Search, X } from '@lucide/vue'
-import type { DrinkingStatus, GroupMode, StorageLocation, WineFilters, WineSort, WineSummary, WineType } from '@/types/domain'
-import { drinkingStatusLabels, storageLocationLabels, wineTypeLabels } from '@/utils/wine'
+import { ArrowDown, ArrowUp, Filter, Search, X } from '@lucide/vue'
+import type { DrinkingStatus, GroupMode, SortDirection, StorageLocation, WineFilters, WineSort, WineSummary, WineType } from '@/types/domain'
+import { defaultSortDirection, drinkingStatusLabels, storageLocationLabels, wineTypeLabels } from '@/utils/wine'
 
-const props = defineProps<{ filters: WineFilters; sort: WineSort; group: GroupMode; wines: WineSummary[]; expanded: boolean }>()
+const props = defineProps<{ filters: WineFilters; sort: WineSort; direction: SortDirection; group: GroupMode; wines: WineSummary[]; expanded: boolean }>()
 const emit = defineEmits<{
   'update:filters': [value: WineFilters]
   'update:sort': [value: WineSort]
+  'update:direction': [value: SortDirection]
   'update:group': [value: GroupMode]
   'update:expanded': [value: boolean]
 }>()
@@ -23,6 +24,12 @@ function patchFilter<K extends keyof WineFilters>(key: K, value: WineFilters[K])
 
 function reset(): void {
   emit('update:filters', { query: '', wineType: 'ALL', country: '', region: '', vintage: 'ALL', drinkingStatus: 'ALL', storageLocation: 'ALL', availability: 'IN_STOCK' })
+}
+
+
+function changeSort(value: WineSort): void {
+  emit('update:sort', value)
+  emit('update:direction', defaultSortDirection(value))
 }
 </script>
 
@@ -55,7 +62,7 @@ function reset(): void {
       <button class="text-button" type="button" @click="reset"><X :size="16" aria-hidden="true" /> Återställ filter</button>
     </div>
     <div class="sort-row">
-      <label><span>Sortera</span><select :value="sort" @change="$emit('update:sort', ($event.target as HTMLSelectElement).value as WineSort)"><option value="DRINK_PRIORITY">Drickprioritet</option><option value="NAME">Namn</option><option value="PRODUCER">Producent</option><option value="VINTAGE">Årgång</option><option value="COUNTRY">Land</option><option value="REGION">Region</option><option value="TYPE">Vintyp</option><option value="PRICE">Pris</option><option value="QUANTITY">Antal</option><option value="PURCHASE_DATE">Inköpsdatum</option><option value="WINDOW_START">Drickfönster, start</option><option value="WINDOW_END">Drickfönster, slut</option></select></label>
+      <div class="sort-control"><label><span>Sortera</span><select :value="sort" @change="changeSort(($event.target as HTMLSelectElement).value as WineSort)"><option value="DRINK_PRIORITY">Drickprioritet</option><option value="NAME">Namn</option><option value="PRODUCER">Producent</option><option value="VINTAGE">Årgång</option><option value="COUNTRY">Land</option><option value="REGION">Region</option><option value="TYPE">Vintyp</option><option value="PRICE">Pris</option><option value="QUANTITY">Antal</option><option value="PURCHASE_DATE">Inköpsdatum</option><option value="WINDOW_START">Drickfönster, start</option><option value="WINDOW_END">Drickfönster, slut</option></select></label><button class="icon-button sort-direction" type="button" :aria-label="direction === 'ASC' ? 'Sortera fallande' : 'Sortera stigande'" :title="direction === 'ASC' ? 'Stigande ordning' : 'Fallande ordning'" @click="$emit('update:direction', direction === 'ASC' ? 'DESC' : 'ASC')"><ArrowUp v-if="direction === 'ASC'" :size="19" aria-hidden="true" /><ArrowDown v-else :size="19" aria-hidden="true" /></button></div>
       <label><span>Gruppera</span><select :value="group" @change="$emit('update:group', ($event.target as HTMLSelectElement).value as GroupMode)"><option value="NONE">Ingen</option><option value="COUNTRY_REGION">Land & region</option><option value="TYPE">Vintyp</option><option value="DRINKING_PERIOD">Drickperiod</option><option value="STORAGE">Förvaring</option></select></label>
     </div>
   </section>

@@ -97,6 +97,15 @@ describe('collection discovery', () => {
     expect(copy).toEqual(summaries)
   })
 
+  it('sorts every field in either direction', () => {
+    expect(sortWines(summaries, 'NAME', 'ASC').map((wine) => wine.name))
+      .toEqual([...summaries.map((wine) => wine.name)].sort((a, b) => a.localeCompare(b, 'sv')))
+    expect(sortWines(summaries, 'QUANTITY', 'ASC')[0]!.quantity)
+      .toBeLessThanOrEqual(sortWines(summaries, 'QUANTITY', 'ASC').at(-1)!.quantity)
+    expect(sortWines(summaries, 'QUANTITY', 'DESC')[0]!.quantity)
+      .toBeGreaterThanOrEqual(sortWines(summaries, 'QUANTITY', 'DESC').at(-1)!.quantity)
+  })
+
   it('groups by country, type and drinking period', () => {
     expect(groupWinesByCountry(summaries).size).toBeGreaterThan(3)
     expect(groupWinesByType(summaries).get('Rött')?.length).toBeGreaterThan(0)

@@ -23,6 +23,7 @@ export const router = createRouter({
     { path: '/history', component: HistoryView, meta: { requiresAuth: true } },
     { path: '/wine/new', component: AddWineView, meta: { requiresAuth: true } },
     { path: '/wine/scan', component: () => import('@/views/BarcodeScannerView.vue'), meta: { requiresAuth: true, immersive: true } },
+    { path: '/wine/label', component: () => import('@/views/LabelScannerView.vue'), meta: { requiresAuth: true, immersive: true } },
     { path: '/wine/search', component: WineSearchView, meta: { requiresAuth: true } },
     { path: '/wine/manual', component: WineFormView, meta: { requiresAuth: true } },
     { path: '/wine/:id', component: WineDetailView, meta: { requiresAuth: true } },
