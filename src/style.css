@@ -537,11 +537,99 @@ p {
   align-items: center;
   justify-content: space-between;
 }
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
 .result-heading h2 {
+  margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+.collection-transfer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.collection-transfer__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.collection-transfer__icon {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  color: var(--wine);
+}
+.collection-transfer__feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.csv-import {
+  display: grid;
+  gap: 14px;
+}
+.csv-import textarea {
+  min-height: 190px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+}
+.csv-import__preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--line);
+}
+.csv-import__preview > div {
+  display: grid;
+  gap: 2px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.csv-import__preview > div + div {
+  border-left: 1px solid var(--line);
+}
+.csv-import__preview span,
+.csv-import__changes span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.csv-import__errors {
+  margin: 0;
+  padding: 10px 12px 10px 30px;
+  color: #842f31;
+  background: #f8e8e8;
+  font-size: 0.78rem;
+}
+.csv-import__changes summary {
+  padding: 8px 0;
+  color: var(--wine);
+  cursor: pointer;
+  font-weight: 750;
+}
+.csv-import__changes ul {
+  display: grid;
+  max-height: 180px;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.csv-import__changes li {
+  display: grid;
+  gap: 2px;
 }
 .wine-groups,
 .wine-group {
@@ -2017,6 +2105,26 @@ p {
   }
   .wishlist-entry {
     border: 0;
+  }
+}
+
+@media (max-width: 699px) {
+  .result-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .collection-transfer {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-direction: column;
+  }
+  .collection-transfer__actions {
+    width: 100%;
+  }
+  .collection-transfer__actions .button {
+    flex: 1;
+    padding-inline: 10px;
   }
 }
 

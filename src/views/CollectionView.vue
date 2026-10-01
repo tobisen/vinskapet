@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { CircleDollarSign, GlassWater, LibraryBig, Search } from '@lucide/vue'
 import CollectionControls from '@/components/CollectionControls.vue'
+import CollectionTransfer from '@/components/CollectionTransfer.vue'
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import type { GroupMode, SortDirection, WineFilters, WineSort } from '@/types/domain'
@@ -30,7 +31,7 @@ const groups = computed(() => groupWines(results.value, group.value))
     </section>
 
     <CollectionControls v-model:filters="filters" v-model:sort="sort" v-model:direction="direction" v-model:group="group" v-model:expanded="filtersExpanded" :wines="store.summaries.value" />
-    <div class="result-heading"><h2>{{ results.length }} {{ results.length === 1 ? 'vin' : 'viner' }}</h2></div>
+    <div class="result-toolbar"><div class="result-heading"><h2>{{ results.length }} {{ results.length === 1 ? 'vin' : 'viner' }}</h2></div><CollectionTransfer :wines="store.summaries.value" /></div>
     <div v-if="results.length" class="wine-groups">
       <section v-for="[title, wines] in groups" :key="title" class="wine-group">
         <div v-if="group !== 'NONE'" class="group-heading"><h2>{{ title }}</h2><span>{{ wines.reduce((sum, wine) => sum + wine.quantity, 0) }} flaskor</span></div>
