@@ -2516,12 +2516,13 @@ p {
   border: 1px solid #ebe8e8;
 }
 .wine-image img {
+  position: absolute;
+  inset: 4px 5px;
   display: block;
   width: calc(100% - 10px);
   height: calc(100% - 8px);
-  object-fit: scale-down;
-  object-position: 50% 100%;
-  background: #fff;
+  object-fit: contain;
+  object-position: center;
 }
 .wine-image--loaded {
   background: #fff;

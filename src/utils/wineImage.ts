@@ -13,7 +13,7 @@ export function normalizeWineImageUrl(value?: string): string | undefined {
   try {
     const url = new URL(trimmed);
     if (url.hostname === "product-cdn.systembolaget.se") {
-      const match = url.pathname.match(/^(.*\/)(\d+)(?:_\d+)?(?:\.[a-z]+)?$/i);
+      const match = url.pathname.match(/^(.*\/)(\d+)(?:[^/]*)$/i);
       if (match) {
         url.pathname = `${match[1]}${match[2]}_400.png`;
         url.search = "";

@@ -9,6 +9,9 @@ describe('wine image URLs', () => {
     expect(normalizeWineImageUrl(
       'https://product-cdn.systembolaget.se/productimages/56829319/56829319_200.png?crop=1',
     )).toBe('https://product-cdn.systembolaget.se/productimages/56829319/56829319_400.png')
+    expect(normalizeWineImageUrl(
+      'https://product-cdn.systembolaget.se/productimages/56829319/56829319_200.png_400.png',
+    )).toBe('https://product-cdn.systembolaget.se/productimages/56829319/56829319_400.png')
   })
 
   it('leaves other valid image providers unchanged', () => {
