@@ -25,6 +25,20 @@ describe('wine image enrichment', () => {
     ])).toBeUndefined()
   })
 
+  it('rejects a different producer that only shares a first name', () => {
+    expect(scoreWineImageCandidate(
+      { ...wine, producer: 'Paolo Conterno', name: 'Langhe Nebbiolo A Mont' },
+      { source: 'SYSTEMBOLAGET', producer: 'Paolo Scavino', name: 'Paolo Scavino Langhe Nebbiolo', wineType: 'RED', imageUrl: 'https://img.test/wrong.png' },
+    )).toBe(-1)
+  })
+
+  it('accepts a brand stored in the product name instead of the producer field', () => {
+    expect(scoreWineImageCandidate(
+      { ...wine, producer: 'havn', name: 'Riesling', wineType: 'WHITE' },
+      { source: 'SYSTEMBOLAGET', producer: 'Weingut Frey', name: 'havn Riesling', wineType: 'WHITE', imageUrl: 'https://img.test/havn.png' },
+    )).toBeGreaterThanOrEqual(7)
+  })
+
   it('accepts duplicate package variants and prefers the standard bottle', () => {
     const result = findBestWineImage(wine, [
       { source: 'SYSTEMBOLAGET', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED', imageUrl: 'https://img.test/large.png', productNumber: '1236602' },

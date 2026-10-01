@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { findCandidateUrls, findWineCandidatePaths, parseProductHtml, parseServingTemperature } from '../../supabase/functions/_shared/systembolaget'
+import { findCandidateUrls, findWineCandidatePaths, knownProductNumberFor, parseProductHtml, parseServingTemperature } from '../../supabase/functions/_shared/systembolaget'
 import { SystembolagetWineSearchProvider, normalizeProductNumber } from './SystembolagetWineSearchProvider'
 import { wineFromSearchResult } from './wineFromSearchResult'
 
@@ -53,6 +53,46 @@ describe('Systembolaget page parsing', () => {
       servingTemperatureMax: 18, foodPairings: ['Lamm', 'Nöt', 'Vilt'],
       imageUrl: 'https://product-cdn.systembolaget.se/productimages/56829319/56829319_400.png',
     })
+  })
+
+  it('combines split product titles without repeating the producer', () => {
+    const result = parseProductHtml(html({
+      ...product,
+      productNameBold: 'Susana Balbo',
+      productNameThin: 'Signature Barrel Fermented Torrontés',
+      producerName: 'Susana Balbo Wines',
+    }), 'https://www.systembolaget.se/produkt/vin/susana-balbo-9296801/')
+    expect(result?.name).toBe('Susana Balbo Signature Barrel Fermented Torrontés')
+
+    expect(parseProductHtml(html(), 'https://example.test/product')?.name).toBe('Barolo di Serralunga')
+  })
+
+  it('keeps individual name-token candidates ahead of loose producer-token candidates', () => {
+    const paths = [
+      '/produkt/vin/etna-bianco-7193301/',
+      '/produkt/vin/etna-bianco-9592301/',
+      '/produkt/vin/etna-bianco-9599701/',
+      '/produkt/vin/deaetna-bianco-9257401/',
+      '/produkt/vin/idda-etna-bianco-7070201/',
+      '/produkt/vin/vulka-etna-bianco-5170101/',
+      '/produkt/vin/etna-9209501/',
+      '/produkt/vin/san-giovanni-5409501/',
+      '/produkt/vin/e-rosso-7203101/',
+    ]
+    expect(findWineCandidatePaths(paths, { name: 'Etna Bianco', producer: 'Giovanni Rosso' }))
+      .toContain('https://www.systembolaget.se/produkt/vin/etna-9209501/')
+  })
+
+  it('uses verified product numbers when the sitemap title omits part of the wine name', () => {
+    expect(knownProductNumberFor('Barbera d’Alba Busije')).toBe('7572201')
+    expect(knownProductNumberFor('Langhe Nebbiolo A Mont')).toBe('9262601')
+    expect(knownProductNumberFor('Unknown wine')).toBeUndefined()
+    expect(findWineCandidatePaths([
+      '/produkt/vin/barbera-d-alba-2307101/',
+      '/produkt/vin/barbera-d-alba-7572201/',
+    ], { name: 'Barbera d’Alba Busije' })[0]).toBe(
+      'https://www.systembolaget.se/produkt/vin/barbera-d-alba-7572201/',
+    )
   })
 
   it('keeps missing vintage and image undefined', () => {

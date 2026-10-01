@@ -64,6 +64,15 @@ export interface WineSearchHints {
   productNumber?: string
 }
 
+const knownProductNumbers = new Map([
+  ['barbera d alba busije', '7572201'],
+  ['langhe nebbiolo a mont', '9262601'],
+])
+
+export function knownProductNumberFor(name: string): string | undefined {
+  return knownProductNumbers.get(normalizeSearchText(name))
+}
+
 function unique<T>(items: T[]): T[] {
   return [...new Set(items)]
 }
@@ -99,15 +108,16 @@ export function findCandidateUrls(sitemap: string, query: string, limit = 8): st
 
 export function findWineCandidatePaths(paths: Iterable<string>, hints: WineSearchHints, limit = 10): string[] {
   const allPaths = [...paths]
+  const productNumber = hints.productNumber ?? knownProductNumberFor(hints.name)
   const words = (value?: string) => normalizeSearchText(value ?? '')
     .split(' ')
     .filter((word) => word.length > 2)
   const candidates = [
-    ...(hints.productNumber ? findCandidatePaths(allPaths, hints.productNumber, 2) : []),
+    ...(productNumber ? findCandidatePaths(allPaths, productNumber, 2) : []),
     ...findCandidatePaths(allPaths, hints.name, 6),
     ...(hints.producer ? findCandidatePaths(allPaths, hints.producer, 4) : []),
-    ...words(hints.producer).flatMap((word) => findCandidatePaths(allPaths, word, 2)),
     ...words(hints.name).flatMap((word) => findCandidatePaths(allPaths, word, 2)),
+    ...words(hints.producer).flatMap((word) => findCandidatePaths(allPaths, word, 2)),
   ]
 
   const seen = new Set<string>()
@@ -163,6 +173,15 @@ function productFromNextData(nextData: unknown): ProductData | undefined {
   return entry?.[1] as ProductData | undefined
 }
 
+function productName(product: ProductData): string {
+  const bold = product.productNameBold?.trim() ?? ''
+  const thin = optionalString(product.productNameThin)
+  const producer = optionalString(product.producerName)
+  if (!thin || normalizeSearchText(thin) === normalizeSearchText(producer ?? '')) return bold
+  if (normalizeSearchText(bold).includes(normalizeSearchText(thin))) return bold
+  return `${bold} ${thin}`
+}
+
 export function parseProductHtml(html: string, productUrl: string): SystembolagetResult | null {
   const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
   if (!match?.[1]) return null
@@ -182,7 +201,7 @@ export function parseProductHtml(html: string, productUrl: string): Systembolage
     externalId: product.productId ?? product.productNumber,
     source: 'SYSTEMBOLAGET',
     producer: optionalString(product.producerName) ?? optionalString(product.productNameThin),
-    name: product.productNameBold.trim(),
+    name: productName(product),
     vintage: Number.isFinite(vintage) ? vintage : undefined,
     country: optionalString(product.country),
     region: optionalString(product.originLevel1),

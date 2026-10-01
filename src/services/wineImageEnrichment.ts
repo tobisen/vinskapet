@@ -30,13 +30,16 @@ function coverage(expected?: string, actual?: string): number {
 export function scoreWineImageCandidate(wine: Wine, result: WineSearchResult): number {
   if (!result.imageUrl || (result.wineType && result.wineType !== wine.wineType)) return -1
   const nameCoverage = coverage(wine.name, result.name)
-  const producerCoverage = coverage(wine.producer, result.producer)
+  const producerCoverage = Math.max(
+    coverage(wine.producer, result.producer),
+    coverage(wine.producer, result.name),
+  )
   const minimumNameCoverage = producerCoverage >= 0.5 ? 0.5 : 0.6
   if (nameCoverage < minimumNameCoverage) return -1
 
   let score = nameCoverage * 8
   if (wine.producer.trim()) {
-    if (producerCoverage === 0) return -1
+    if (producerCoverage < 0.75) return -1
     score += producerCoverage * 5
   }
   if (normalize(wine.name) === normalize(result.name)) score += 3
