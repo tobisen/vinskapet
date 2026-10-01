@@ -44,6 +44,7 @@ export interface Wine {
   notes?: string
   assessmentSource?: string
   assessmentUpdatedAt?: string
+  wishlistQuantity?: number
   status: WineStatus
   createdAt: string
   updatedAt: string

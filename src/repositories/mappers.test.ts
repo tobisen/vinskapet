@@ -18,7 +18,7 @@ const wineRow: WineRow = {
   drinking_window_start: 2027, drinking_window_end: 2035, optimal_drinking_start: 2029,
   optimal_drinking_end: 2033, serving_temperature_min: 16, serving_temperature_max: 18,
   food_pairings: ['Vilt'], description: 'Nyanserat.', notes: null, assessment_source: null,
-  assessment_updated_at: null, status: 'COLLECTION', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-02T00:00:00Z',
+  assessment_updated_at: null, wishlist_quantity: 1, status: 'COLLECTION', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-02T00:00:00Z',
 }
 
 describe('database mappers', () => {
@@ -30,8 +30,9 @@ describe('database mappers', () => {
 
   it('maps a domain wine to a snake_case insert with user ownership', () => {
     const domain = wineRowToDomain(wineRow)
+    domain.wishlistQuantity = 3
     const insert = wineToInsert(domain, 'auth-user')
-    expect(insert).toMatchObject({ user_id: 'auth-user', wine_type: 'RED', reference_price: 349, drinking_window_end: 2035 })
+    expect(insert).toMatchObject({ user_id: 'auth-user', wine_type: 'RED', reference_price: 349, drinking_window_end: 2035, wishlist_quantity: 3 })
   })
 
   it('maps inventory in both directions', () => {

@@ -71,6 +71,7 @@ export async function saveWineToWishlist(
     servingTemperatureMax: existingWine.servingTemperatureMax ?? wine.servingTemperatureMax,
     foodPairings: existingWine.foodPairings.length ? existingWine.foodPairings : wine.foodPairings,
     description: existingWine.description ?? wine.description,
+    wishlistQuantity: wine.wishlistQuantity ?? existingWine.wishlistQuantity ?? 1,
     status: 'WISHLIST',
     updatedAt: new Date().toISOString(),
   }

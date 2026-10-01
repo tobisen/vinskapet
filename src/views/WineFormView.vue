@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { ArrowLeft, Check } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import InventoryForm from '@/components/InventoryForm.vue'
+import QuantityStepper from '@/components/QuantityStepper.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { findDuplicateWine, saveWinePurchase } from '@/search/duplicates'
 import type { InventoryInput, Wine, WineStatus, WineType } from '@/types/domain'
@@ -31,6 +32,7 @@ const form = reactive({
   drinkingWindowStart: existing.value?.drinkingWindowStart, drinkingWindowEnd: existing.value?.drinkingWindowEnd,
   optimalDrinkingStart: existing.value?.optimalDrinkingStart, optimalDrinkingEnd: existing.value?.optimalDrinkingEnd,
   description: existing.value?.description ?? '', notes: existing.value?.notes ?? '',
+  wishlistQuantity: existing.value?.wishlistQuantity ?? 1,
 })
 
 async function saveBarcodeMapping(wineId: string): Promise<boolean> {
@@ -59,6 +61,7 @@ function buildWine(): Wine {
     foodPairings: form.foodPairings.split(',').map((item) => item.trim()).filter(Boolean),
     description: form.description.trim() || undefined, notes: form.notes.trim() || undefined,
     assessmentSource: existing.value?.assessmentSource, assessmentUpdatedAt: existing.value?.assessmentUpdatedAt,
+    wishlistQuantity: form.wishlistQuantity,
     status: status.value, createdAt: existing.value?.createdAt ?? now, updatedAt: now,
   }
 }
@@ -104,6 +107,7 @@ function continueNew(): void {
       <p v-if="barcodeError" class="form-error" role="alert">{{ barcodeError }}</p>
       <form v-if="step === 1 || isEdit" class="form-stack wine-form" @submit.prevent="isEdit ? saveEdit() : (status === 'WISHLIST' ? saveNew() : continueNew())">
         <div v-if="!isEdit" class="segmented form-mode"><button type="button" :class="{ selected: status === 'COLLECTION' }" @click="status = 'COLLECTION'">Till samlingen</button><button type="button" :class="{ selected: status === 'WISHLIST' }" @click="status = 'WISHLIST'">Till önskelistan</button></div>
+        <QuantityStepper v-if="status === 'WISHLIST'" v-model="form.wishlistQuantity" label="Önskat antal flaskor" :disabled="store.isSaving.value" />
         <label class="field"><span>Producent *</span><input v-model="form.producer" required autocomplete="organization" placeholder="Exempel: Prunotto" /></label>
         <label class="field"><span>Vinets namn *</span><input v-model="form.name" required placeholder="Exempel: Barbaresco" /></label>
         <div class="field-row"><label class="field"><span>Årgång</span><input v-model.number="form.vintage" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2023" /></label><label class="field"><span>Vintyp *</span><select v-model="form.wineType" required><option value="RED">Rött</option><option value="WHITE">Vitt</option><option value="ROSE">Rosé</option><option value="SPARKLING_WHITE">Mousserande</option><option value="SPARKLING_ROSE">Mousserande rosé</option><option value="ORANGE">Orange</option><option value="DESSERT">Dessertvin</option><option value="FORTIFIED">Starkvin</option></select></label></div>

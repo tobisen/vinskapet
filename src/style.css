@@ -928,6 +928,10 @@ p {
   border-bottom: 1px solid var(--line);
   padding-bottom: 16px;
 }
+.wishlist-entry > .wishlist-quantity {
+  width: min(240px, 100%);
+  margin-top: 10px;
+}
 .wishlist-actions {
   display: flex;
   gap: 8px;
@@ -1196,6 +1200,17 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+.confirmation-fields .field {
+  grid-template-rows: minmax(2.2em, auto) 46px auto;
+  align-content: start;
+}
+.confirmation-fields .field > input,
+.confirmation-fields .field > select {
+  grid-row: 2;
+}
+.confirmation-fields .field > small {
+  grid-row: 3;
 }
 .field {
   display: grid;

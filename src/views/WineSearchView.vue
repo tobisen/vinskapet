@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ArrowLeft, Heart, Search } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import InventoryForm from "@/components/InventoryForm.vue";
+import QuantityStepper from "@/components/QuantityStepper.vue";
 import WineImage from "@/components/WineImage.vue";
 import WineTypeBadge from "@/components/WineTypeBadge.vue";
 import { useWineStore } from "@/composables/useWineStore";
@@ -49,6 +50,7 @@ const confirmedVintage = ref<number>();
 const confirmedWineType = ref<WineType>();
 const selectionError = ref("");
 const saveTarget = ref<"COLLECTION" | "WISHLIST">("COLLECTION");
+const wishlistQuantity = ref(1);
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 const systembolagetProvider = new SystembolagetWineSearchProvider(
@@ -169,6 +171,7 @@ function selectResult(result: WineSearchResult): void {
   confirmedWineType.value = result.wineType;
   selectionError.value = "";
   saveTarget.value = result.existingWine?.status === "WISHLIST" ? "WISHLIST" : "COLLECTION";
+  wishlistQuantity.value = result.existingWine?.wishlistQuantity ?? 1;
 }
 
 async function addExistingToWishlist(): Promise<void> {
@@ -218,12 +221,15 @@ async function addExternalWishlist(): Promise<void> {
     return;
   }
 
-  const wine = wineFromSearchResult(
-    result,
-    confirmedVintage.value,
-    confirmedWineType.value,
-    "WISHLIST",
-  );
+  const wine = {
+    ...wineFromSearchResult(
+      result,
+      confirmedVintage.value,
+      confirmedWineType.value,
+      "WISHLIST",
+    ),
+    wishlistQuantity: wishlistQuantity.value,
+  };
   const duplicate = findDuplicateWine(result, store.summaries.value);
   const saved = await saveWineToWishlist(wine, duplicate, {
     createWine: store.createWine,
@@ -293,6 +299,7 @@ async function addExternalWishlist(): Promise<void> {
         <InventoryForm
           :submit-label="selected.existingWine.status === 'WISHLIST' ? 'Jag har köpt det' : 'Lägg till i samlingen'"
           :saving="store.isSaving.value"
+          :initial-quantity="selected.existingWine.status === 'WISHLIST' ? (selected.existingWine.wishlistQuantity ?? 1) : 1"
           :initial-price="selected.referencePrice"
           @submit="addInventory"
         />
@@ -350,7 +357,7 @@ async function addExternalWishlist(): Promise<void> {
             }}</strong></span
           >
         </div>
-        <div class="field-row">
+        <div class="field-row confirmation-fields">
           <label class="field"
             ><span>Bekräfta årgång</span
             ><input
@@ -412,15 +419,21 @@ async function addExternalWishlist(): Promise<void> {
           :initial-price="selected.referencePrice"
           @submit="addExternalPurchase"
         />
-        <button
-          v-else
-          class="button button-primary button-block"
-          type="button"
-          :disabled="store.isSaving.value"
-          @click="addExternalWishlist"
-        >
-          <Heart :size="18" aria-hidden="true" /> Lägg till i önskelistan
-        </button>
+        <template v-else>
+          <QuantityStepper
+            v-model="wishlistQuantity"
+            label="Önskat antal flaskor"
+            :disabled="store.isSaving.value"
+          />
+          <button
+            class="button button-primary button-block"
+            type="button"
+            :disabled="store.isSaving.value"
+            @click="addExternalWishlist"
+          >
+            <Heart :size="18" aria-hidden="true" /> Lägg till i önskelistan
+          </button>
+        </template>
       </div>
 
       <template v-else>

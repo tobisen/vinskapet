@@ -5,7 +5,7 @@ const columns = [
   'alcohol_percentage', 'image_url', 'systembolaget_product_number', 'systembolaget_url', 'reference_price',
   'currency', 'storage_potential', 'drinking_window_start', 'drinking_window_end', 'optimal_drinking_start',
   'optimal_drinking_end', 'serving_temperature_min', 'serving_temperature_max', 'food_pairings', 'description',
-  'notes', 'status', 'quantity', 'average_purchase_price', 'storage_locations', 'tasting_count', 'created_at', 'updated_at',
+  'notes', 'status', 'wishlist_quantity', 'quantity', 'average_purchase_price', 'storage_locations', 'tasting_count', 'created_at', 'updated_at',
 ] as const
 
 const wineTypes = new Set<WineType>(['RED', 'WHITE', 'ROSE', 'SPARKLING_WHITE', 'SPARKLING_ROSE', 'ORANGE', 'DESSERT', 'FORTIFIED'])
@@ -24,7 +24,7 @@ export function exportWinesToCsv(wines: readonly WineSummary[]): string {
     wine.grapes.join(' | '), wine.alcoholPercentage, wine.image, wine.systembolagetProductNumber, wine.systembolagetUrl,
     wine.referencePrice, wine.currency, wine.storagePotential, wine.drinkingWindowStart, wine.drinkingWindowEnd,
     wine.optimalDrinkingStart, wine.optimalDrinkingEnd, wine.servingTemperatureMin, wine.servingTemperatureMax,
-    wine.foodPairings.join(' | '), wine.description, wine.notes, wine.status, wine.quantity, wine.averagePrice,
+    wine.foodPairings.join(' | '), wine.description, wine.notes, wine.status, wine.wishlistQuantity, wine.quantity, wine.averagePrice,
     wine.storageLocations.join(' | '), wine.tastingCount, wine.createdAt, wine.updatedAt,
   ])
   return `\uFEFF${[columns, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n')}`
@@ -168,6 +168,15 @@ export function previewWineCsvImport(text: string, existingWines: readonly Wine[
     setList('food_pairings', 'foodPairings')
     setString('description', 'description')
     setString('notes', 'notes')
+    const wishlistQuantity = value('wishlist_quantity')
+    if (wishlistQuantity) {
+      const next = Number(wishlistQuantity)
+      if (!Number.isInteger(next) || next < 1) errors.push(`Rad ${line}: wishlist_quantity måste vara ett heltal större än 0.`)
+      else if (wine.wishlistQuantity !== next) {
+        wine.wishlistQuantity = next
+        changedFields.push('wishlist_quantity')
+      }
+    }
 
     const wineType = value('wine_type')
     if (wineType && !wineTypes.has(wineType as WineType)) errors.push(`Rad ${line}: wine_type ${wineType} är ogiltig.`)

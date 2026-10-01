@@ -33,6 +33,15 @@ describe('wine CSV transfer', () => {
     expect(preview.updates[0]?.changedFields).toEqual(['description'])
   })
 
+  it('updates and validates desired wishlist quantity', () => {
+    const updated = previewWineCsvImport('wine_id,wishlist_quantity\nwine-1,4', [wine])
+    expect(updated.errors).toEqual([])
+    expect(updated.updates[0]?.wine.wishlistQuantity).toBe(4)
+
+    const invalid = previewWineCsvImport('wine_id,wishlist_quantity\nwine-1,0', [wine])
+    expect(invalid.errors[0]).toContain('större än 0')
+  })
+
   it('blocks unknown and duplicate IDs', () => {
     const preview = previewWineCsvImport('wine_id,name\nmissing,Nytt\nwine-1,Nytt\nwine-1,Igen', [wine])
     expect(preview.errors).toHaveLength(2)

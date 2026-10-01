@@ -220,8 +220,7 @@ async function deleteWine(): Promise<void> {
         </p>
         <div class="detail-status">
           <DrinkingStatusBadge :wine="wine" /><strong
-            >{{ wine.quantity }}
-            {{ wine.quantity === 1 ? "flaska" : "flaskor" }}</strong
+            >{{ wine.status === "WISHLIST" ? `Önskar ${wine.wishlistQuantity ?? 1} st` : `${wine.quantity} ${wine.quantity === 1 ? "flaska" : "flaskor"}` }}</strong
           >
         </div>
       </div>
@@ -443,6 +442,7 @@ async function deleteWine(): Promise<void> {
       @close="modal = undefined"
       ><InventoryForm
         :submit-label="wine.status === 'WISHLIST' ? 'Lägg till i samlingen' : 'Lägg till flaskor'"
+        :initial-quantity="wine.status === 'WISHLIST' ? (wine.wishlistQuantity ?? 1) : 1"
         :initial-price="wine.referencePrice"
         :saving="store.isSaving.value"
         @submit="add"

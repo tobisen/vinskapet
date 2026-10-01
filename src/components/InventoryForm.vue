@@ -7,12 +7,13 @@ import { todayIso } from '@/utils/format'
 const props = withDefaults(defineProps<{
   submitLabel?: string
   saving?: boolean
+  initialQuantity?: number
   initialPrice?: number
   initialLocation?: string
-}>(), { submitLabel: 'Spara flaskor', saving: false, initialPrice: undefined, initialLocation: 'Systembolaget' })
+}>(), { submitLabel: 'Spara flaskor', saving: false, initialQuantity: 1, initialPrice: undefined, initialLocation: 'Systembolaget' })
 const emit = defineEmits<{ submit: [input: InventoryInput] }>()
 
-const quantity = ref(1)
+const quantity = ref(Math.max(1, props.initialQuantity))
 const purchasePrice = ref<number | undefined>(props.initialPrice)
 const purchaseDate = ref(todayIso())
 const purchaseLocation = ref(props.initialLocation)

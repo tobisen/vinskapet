@@ -29,7 +29,7 @@ const storagePotentialLabels: Record<NonNullable<WineSummary["storagePotential"]
       <div class="wine-card__top">
         <WineTypeBadge :type="wine.wineType" />
         <span class="wine-card__quantity"
-          >{{ wine.status === "WISHLIST" ? "Önskelista" : `${wine.quantity} ${wine.quantity === 1 ? "flaska" : "flaskor"}` }}</span
+          >{{ wine.status === "WISHLIST" ? `Önskar ${wine.wishlistQuantity ?? 1} st` : `${wine.quantity} ${wine.quantity === 1 ? "flaska" : "flaskor"}` }}</span
         >
       </div>
       <div class="wine-card__body">

@@ -34,6 +34,7 @@ export function wineFromSearchResult(
     servingTemperatureMax: result.servingTemperatureMax,
     foodPairings: result.foodPairings ?? [],
     description: result.description,
+    wishlistQuantity: 1,
     status,
     createdAt: now,
     updatedAt: now,

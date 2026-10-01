@@ -30,6 +30,7 @@ export interface WineRow {
   notes: string | null
   assessment_source: string | null
   assessment_updated_at: string | null
+  wishlist_quantity: number
   status: WineStatus
   created_at: string
   updated_at: string

@@ -50,12 +50,12 @@ describe('duplicate matching', () => {
   it('creates a wishlist wine without inventory', async () => {
     const createWine = vi.fn(async () => true)
     const updateWine = vi.fn(async () => true)
-    const wishlistWine = { ...wine, id: 'wishlist-wine', status: 'WISHLIST' as const }
+    const wishlistWine = { ...wine, id: 'wishlist-wine', wishlistQuantity: 3, status: 'WISHLIST' as const }
 
     const result = await saveWineToWishlist(wishlistWine, undefined, { createWine, updateWine })
 
     expect(result).toEqual({ saved: true, wineId: 'wishlist-wine', created: true })
-    expect(createWine).toHaveBeenCalledWith(expect.objectContaining({ status: 'WISHLIST' }))
+    expect(createWine).toHaveBeenCalledWith(expect.objectContaining({ status: 'WISHLIST', wishlistQuantity: 3 }))
     expect(updateWine).not.toHaveBeenCalled()
   })
 
