@@ -1,4 +1,5 @@
 import { parseOpenFoodFactsProduct } from '../_shared/open-food-facts.ts'
+import { parseGtinHubProduct, parseProductGuruProduct } from '../_shared/barcode-sources.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +27,27 @@ function rateLimited(identity: string): boolean {
   return recent.length > 12
 }
 
+async function fetchJson(url: string, source: string): Promise<unknown | null> {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Vinskapet/0.1 (https://github.com/tobisen/vinskapet)' },
+      signal: AbortSignal.timeout(7_000),
+    })
+    if (response.status === 404) {
+      console.info(`barcode-lookup ${source} miss`, { status: response.status })
+      return null
+    }
+    if (!response.ok) {
+      console.warn(`barcode-lookup ${source} unavailable`, { status: response.status })
+      return null
+    }
+    return await response.json()
+  } catch (error) {
+    console.warn(`barcode-lookup ${source} failed`, error)
+    return null
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
@@ -46,26 +68,26 @@ Deno.serve(async (request) => {
 
   try {
     const fields = 'code,product_name,product_name_sv,brands,countries,categories_tags,image_front_url,image_url'
-    const response = await fetch(`https://world.openfoodfacts.org/api/v3/product/${barcode}?fields=${fields}`, {
-      headers: { 'User-Agent': 'Vinskapet/0.1 (https://github.com/tobisen/vinskapet)' },
-      signal: AbortSignal.timeout(10_000),
-    })
-    if (response.status === 404) {
-      console.info('barcode-lookup Open Food Facts miss', { barcode, status: response.status })
-      return json({ result: null })
-    }
-    if (!response.ok) return json({ error: `Open Food Facts returned ${response.status}` }, 502)
-    const payload = await response.json() as { product?: Record<string, unknown> }
-    const result = parseOpenFoodFactsProduct(payload, barcode)
+    const openFoodFactsPayload = await fetchJson(`https://world.openfoodfacts.org/api/v3/product/${barcode}?fields=${fields}`, 'Open Food Facts')
+    const openFoodFactsResult = parseOpenFoodFactsProduct((openFoodFactsPayload ?? {}) as { product?: Record<string, unknown> }, barcode)
     console.info('barcode-lookup Open Food Facts result', {
       barcode,
-      matched: Boolean(result),
-      reason: payload.product && !result ? 'Product exists but is not a usable wine record.' : undefined,
-      product: result ? { name: result.name, producer: result.producer, wineType: result.wineType } : undefined,
+      matched: Boolean(openFoodFactsResult),
+      product: openFoodFactsResult ? { name: openFoodFactsResult.name, producer: openFoodFactsResult.producer, wineType: openFoodFactsResult.wineType } : undefined,
     })
-    return json({ result })
+    if (openFoodFactsResult) return json({ result: openFoodFactsResult })
+
+    const productGuruPayload = await fetchJson(`https://product-guru.org/lookup/${barcode}.json`, 'ProductGuru')
+    const productGuruResult = parseProductGuruProduct(productGuruPayload, barcode)
+    console.info('barcode-lookup ProductGuru result', { barcode, matched: Boolean(productGuruResult), product: productGuruResult })
+    if (productGuruResult) return json({ result: productGuruResult })
+
+    const gtinHubPayload = await fetchJson(`https://gtinhub.com/api/v1/product/${barcode}`, 'GTINHub')
+    const gtinHubResult = parseGtinHubProduct(gtinHubPayload, barcode)
+    console.info('barcode-lookup GTINHub result', { barcode, matched: Boolean(gtinHubResult), product: gtinHubResult })
+    return json({ result: gtinHubResult })
   } catch (error) {
-    console.error('Open Food Facts lookup failed', error)
+    console.error('Free barcode lookup failed', error)
     return json({ error: 'Kunde inte slå upp streckkoden just nu.' }, 502)
   }
 })

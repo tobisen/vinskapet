@@ -8,7 +8,7 @@ import WineImage from '@/components/WineImage.vue'
 import WineTypeBadge from '@/components/WineTypeBadge.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { findDuplicateWine } from '@/search/duplicates'
-import { OpenFoodFactsBarcodeSearchProvider } from '@/search/OpenFoodFactsBarcodeSearchProvider'
+import { FreeBarcodeSearchProvider } from '@/search/FreeBarcodeSearchProvider'
 import { SystembolagetWineSearchProvider } from '@/search/SystembolagetWineSearchProvider'
 import { wineFromSearchResult } from '@/search/wineFromSearchResult'
 import { repositories } from '@/services/repository'
@@ -42,16 +42,16 @@ let controls: IScannerControls | undefined
 let handled = false
 
 const systembolaget = new SystembolagetWineSearchProvider((name, options) => supabase.functions.invoke(name, options))
-const openFoodFacts = new OpenFoodFactsBarcodeSearchProvider((name, options) => supabase.functions.invoke(name, options))
+const freeBarcodeSearch = new FreeBarcodeSearchProvider((name, options) => supabase.functions.invoke(name, options))
 function recordDebug(entry: BarcodeDebugEntry): void {
   debugEntries.value = [...debugEntries.value, entry]
   console.info(`[barcode:${entry.stage}] ${entry.message}`, entry.details ?? '')
 }
-const lookup = new BarcodeLookupService(repositories.barcodes, (id) => store.getWine(id), systembolaget, openFoodFacts, recordDebug)
+const lookup = new BarcodeLookupService(repositories.barcodes, (id) => store.getWine(id), systembolaget, freeBarcodeSearch, recordDebug)
 const codeFormat = computed(() => code.value ? eanFormat(code.value) : null)
 const existingWine = computed(() => match.value?.existingWine ?? (match.value ? findDuplicateWine(match.value, store.summaries.value) : undefined))
 const existingQuantity = computed(() => existingWine.value ? store.getWine(existingWine.value.id)?.quantity ?? 0 : 0)
-const searchTarget = computed(() => ({ path: '/wine/search', query: { barcode: code.value } }))
+const searchTarget = computed(() => ({ path: '/wine/search', query: { barcode: code.value, lookup: 'done' } }))
 const manualTarget = computed(() => ({ path: '/wine/manual', query: { barcode: code.value } }))
 
 function stopCamera(): void {

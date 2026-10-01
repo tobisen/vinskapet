@@ -3,7 +3,7 @@ import { isValidEan, normalizeEan } from '@/utils/barcode'
 
 type InvokeFunction = (name: string, options: { body: { barcode: string } }) => Promise<{ data: { result?: WineSearchResult | null } | null; error: unknown }>
 
-export class OpenFoodFactsBarcodeSearchProvider implements WineSearchProvider {
+export class FreeBarcodeSearchProvider implements WineSearchProvider {
   constructor(private readonly invoke: InvokeFunction) {}
 
   async search(): Promise<WineSearchResult[]> { return [] }
@@ -13,7 +13,7 @@ export class OpenFoodFactsBarcodeSearchProvider implements WineSearchProvider {
     const barcode = normalizeEan(value)
     if (!isValidEan(barcode)) return []
     const { data, error } = await this.invoke('barcode-lookup', { body: { barcode } })
-    if (error) throw new Error('Open Food Facts barcode lookup failed', { cause: error })
+    if (error) throw new Error('Free barcode lookup failed', { cause: error })
     return data?.result ? [data.result] : []
   }
 }

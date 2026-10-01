@@ -10,7 +10,7 @@ export type BarcodeLookupResult =
   | { status: 'OFFLINE'; barcode: string }
   | { status: 'ERROR'; barcode: string }
 
-export type BarcodeDebugStage = 'INPUT' | 'LOCAL' | 'OPEN_FOOD_FACTS' | 'SYSTEMBOLAGET' | 'RESULT' | 'MAPPING'
+export type BarcodeDebugStage = 'INPUT' | 'LOCAL' | 'OPEN_FOOD_FACTS' | 'PRODUCT_GURU' | 'GTIN_HUB' | 'SYSTEMBOLAGET' | 'RESULT' | 'MAPPING'
 
 export interface BarcodeDebugEntry {
   stage: BarcodeDebugStage
@@ -47,7 +47,10 @@ export function evaluateSystembolagetBarcodeCandidate(
   if (source.wineType && candidate.wineType && source.wineType !== candidate.wineType) {
     return { accepted: false, reason: 'Vintypen skiljer sig.', score: -1 }
   }
-  const nameCoverage = tokenCoverage(source.name, candidate.name)
+  if (source.vintage && candidate.vintage && source.vintage !== candidate.vintage) {
+    return { accepted: false, reason: `Årgången skiljer sig (${source.vintage}/${candidate.vintage}).`, score: -1 }
+  }
+  const nameCoverage = Math.max(tokenCoverage(source.name, candidate.name), tokenCoverage(candidate.name, source.name))
   const producerCoverage = source.producer
     ? Math.max(tokenCoverage(source.producer, candidate.producer), tokenCoverage(source.producer, candidate.name))
     : 0
@@ -107,9 +110,12 @@ export class BarcodeLookupService {
 
       const fallbackMatches = await this.fallback?.lookupBarcode?.(barcode) ?? []
       const fallbackMatch = fallbackMatches[0]
+      const externalStage: BarcodeDebugStage = fallbackMatch?.source === 'PRODUCT_GURU'
+        ? 'PRODUCT_GURU'
+        : fallbackMatch?.source === 'GTIN_HUB' ? 'GTIN_HUB' : 'OPEN_FOOD_FACTS'
       this.debug({
-        stage: 'OPEN_FOOD_FACTS',
-        message: fallbackMatch ? 'Open Food Facts returnerade en vinprodukt.' : 'EAN saknas eller är inte klassad som vin i Open Food Facts.',
+        stage: externalStage,
+        message: fallbackMatch ? `${fallbackMatch.source} returnerade en produktkandidat.` : 'Ingen gratis extern EAN-källa hittade produkten.',
         details: fallbackMatch ?? { barcode, matches: 0 },
       })
       if (fallbackMatch) {
@@ -135,8 +141,16 @@ export class BarcodeLookupService {
           this.debug({ stage: 'RESULT', message: 'Verifierad Systembolaget-kandidat vald.', details: matched })
           return { status: 'MATCH', barcode, result: matched, source: 'SYSTEMBOLAGET' }
         }
-        this.debug({ stage: 'RESULT', message: 'Open Food Facts-träffen används utan Systembolaget-match.', details: fallbackMatch })
-        return { status: 'MATCH', barcode, result: fallbackMatch, source: 'OPEN_FOOD_FACTS' }
+        if (fallbackMatch.source === 'OPEN_FOOD_FACTS') {
+          this.debug({ stage: 'RESULT', message: 'Open Food Facts-träffen används utan Systembolaget-match.', details: fallbackMatch })
+          return { status: 'MATCH', barcode, result: fallbackMatch, source: 'OPEN_FOOD_FACTS' }
+        }
+        this.debug({
+          stage: 'RESULT',
+          message: `${fallbackMatch.source}-kandidaten kunde inte verifieras mot Systembolaget och används därför inte automatiskt.`,
+          details: fallbackMatch,
+        })
+        return { status: 'UNKNOWN', barcode }
       }
       this.debug({ stage: 'RESULT', message: 'Ingen extern EAN-träff. Manuell vinsökning krävs.' })
       return { status: 'UNKNOWN', barcode }

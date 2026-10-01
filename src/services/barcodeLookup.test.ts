@@ -61,11 +61,34 @@ describe('BarcodeLookupService', () => {
     expect(result).toMatchObject({ status: 'MATCH', source: 'SYSTEMBOLAGET', result: systemMatch })
   })
 
+  it('matches the GTINHub Chateau Plince result to Systembolaget', async () => {
+    const external = { source: 'GTIN_HUB', name: 'Chateau Plince', vintage: 2018, region: 'Pomerol' }
+    const systemMatch = { source: 'SYSTEMBOLAGET', producer: 'Ch. Plince', name: 'Château Plince', vintage: 2018, wineType: 'RED' as const, productNumber: '240201' }
+    const system: WineSearchProvider = {
+      search: async () => [], getById: async () => null, lookupBarcode: async () => [], searchWine: async () => [systemMatch],
+    }
+    const result = await new BarcodeLookupService(new MemoryBarcodeRepository(), () => undefined, system, provider([external])).lookup('3328155009714')
+    expect(result).toMatchObject({ status: 'MATCH', source: 'SYSTEMBOLAGET', result: { productNumber: '240201' } })
+  })
+
+  it('does not trust an unverified generic barcode candidate', async () => {
+    const external = { source: 'PRODUCT_GURU', name: 'Unrelated product' }
+    const result = await new BarcodeLookupService(new MemoryBarcodeRepository(), () => undefined, provider(), provider([external])).lookup(EAN)
+    expect(result).toEqual({ status: 'UNKNOWN', barcode: EAN })
+  })
+
   it('explains why a Systembolaget candidate is rejected', () => {
     expect(evaluateSystembolagetBarcodeCandidate(
       { source: 'OPEN_FOOD_FACTS', producer: 'Prunotto', name: 'Barbaresco', wineType: 'RED' },
       { source: 'SYSTEMBOLAGET', producer: 'Other', name: 'Riesling', wineType: 'WHITE' },
     )).toMatchObject({ accepted: false, reason: 'Vintypen skiljer sig.' })
+  })
+
+  it('rejects a candidate with a different vintage', () => {
+    expect(evaluateSystembolagetBarcodeCandidate(
+      { source: 'GTIN_HUB', name: 'Chateau Plince', vintage: 2018 },
+      { source: 'SYSTEMBOLAGET', name: 'Château Plince', vintage: 2019 },
+    )).toMatchObject({ accepted: false, reason: 'Årgången skiljer sig (2018/2019).' })
   })
 
   it('switches from automatic EAN lookup to text search when the user types', () => {

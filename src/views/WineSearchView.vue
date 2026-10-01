@@ -10,7 +10,7 @@ import { CompositeWineSearchProvider } from "@/search/CompositeWineSearchProvide
 import { LatestWineSearch } from "@/search/LatestWineSearch";
 import { LocalCollectionWineSearchProvider } from "@/search/LocalCollectionWineSearchProvider";
 import { SystembolagetWineSearchProvider } from "@/search/SystembolagetWineSearchProvider";
-import { OpenFoodFactsBarcodeSearchProvider } from "@/search/OpenFoodFactsBarcodeSearchProvider";
+import { FreeBarcodeSearchProvider } from "@/search/FreeBarcodeSearchProvider";
 import { findDuplicateWine, saveWinePurchase } from "@/search/duplicates";
 import { wineFromSearchResult } from "@/search/wineFromSearchResult";
 import type { InventoryInput, WineType } from "@/types/domain";
@@ -20,7 +20,7 @@ import { supabase } from "@/services/supabase";
 import { wineEnrichmentService } from "@/services/wineEnrichment";
 import { repositories } from "@/services/repository";
 import { isValidEan, normalizeEan } from "@/utils/barcode";
-import { shouldRunBarcodeLookup } from "@/services/barcodeLookup";
+import { BarcodeLookupService, shouldRunBarcodeLookup } from "@/services/barcodeLookup";
 
 function debugBarcode(message: string, details?: unknown): void {
   console.info(`[barcode:FALLBACK] ${message}`, details ?? "");
@@ -52,8 +52,15 @@ const systembolagetProvider = new SystembolagetWineSearchProvider(
     externalError.value = true;
   },
 );
-const fallbackProvider = new OpenFoodFactsBarcodeSearchProvider(
+const fallbackProvider = new FreeBarcodeSearchProvider(
   (name, options) => supabase.functions.invoke(name, options),
+);
+const barcodeLookup = new BarcodeLookupService(
+  repositories.barcodes,
+  (id) => store.getWine(id),
+  systembolagetProvider,
+  fallbackProvider,
+  (entry) => debugBarcode(`${entry.stage}: ${entry.message}`, entry.details),
 );
 const provider = new CompositeWineSearchProvider([
   new LocalCollectionWineSearchProvider(() => store.summaries.value),
@@ -96,12 +103,13 @@ watch(
     selected.value = undefined;
     externalError.value = false;
 
-    if (shouldRunBarcodeLookup(barcode, value)) {
+    if (shouldRunBarcodeLookup(barcode, value) && route.query.lookup !== "done") {
       loading.value = true;
       debugBarcode("Automatisk EAN-sökning från sökvyn.", { barcode });
       void (async () => {
         try {
-          const matches = await provider.lookupBarcode(barcode);
+          const lookupResult = await barcodeLookup.lookup(barcode, navigator.onLine);
+          const matches = lookupResult.status === "MATCH" ? [lookupResult.result] : [];
           results.value = matches;
           debugBarcode("EAN-sökning klar.", { matches: matches.length });
           searched.value = true;
