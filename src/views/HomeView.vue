@@ -3,18 +3,19 @@ import { computed } from 'vue'
 import { ArrowRight, CircleDollarSign, Clock3, GlassWater, LibraryBig, Plus, Sparkles } from '@lucide/vue'
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
+import { buildDrinkingRecommendations, countDrinkingBottles } from '@/domain/drinking'
 import { formatCurrency } from '@/utils/format'
-import { calculateDrinkingPlan, getDrinkingStatus, sortWines } from '@/utils/wine'
 
 const store = useWineStore()
 
-const statusCounts = computed(() => calculateDrinkingPlan(store.inStock.value))
+const recommendations = computed(() => buildDrinkingRecommendations(store.inStock.value))
+const statusCounts = computed(() => countDrinkingBottles(recommendations.value))
 
 const drinkNow = computed(() =>
-  sortWines(
-    store.inStock.value.filter((wine) => ['OPTIMAL', 'DRINK_SOON', 'PAST_WINDOW', 'CAN_DRINK'].includes(getDrinkingStatus(wine))),
-    'DRINK_PRIORITY',
-  ).slice(0, 3),
+  recommendations.value
+    .filter((item) => ['DRINK_SOON', 'DRINK_NOW', 'CAN_DRINK'].includes(item.classification))
+    .slice(0, 3)
+    .map((item) => item.wine),
 )
 </script>
 
@@ -34,17 +35,17 @@ const drinkNow = computed(() =>
     </section>
 
     <section class="home-actions" aria-label="Snabbval">
-      <RouterLink to="/cellar"><GlassWater :size="22" aria-hidden="true" /><span><strong>Välj vin för kvällen</strong><small>Se vad som är redo</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
+      <RouterLink to="/drink"><GlassWater :size="22" aria-hidden="true" /><span><strong>Välj vin för kvällen</strong><small>Se vad som är redo</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
       <RouterLink to="/wine/new"><Plus :size="22" aria-hidden="true" /><span><strong>Lägg till vin</strong><small>Registrera ett nytt inköp</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
       <RouterLink to="/collection"><LibraryBig :size="22" aria-hidden="true" /><span><strong>Öppna samlingen</strong><small>Sök, filtrera och sortera</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
     </section>
 
     <section class="home-section">
-      <div class="section-heading"><div><p class="eyebrow">Drickplan</p><h2>Just nu</h2></div><RouterLink class="text-link" to="/cellar">Öppna källaren <ArrowRight :size="16" aria-hidden="true" /></RouterLink></div>
+      <div class="section-heading"><div><p class="eyebrow">Vad ska jag dricka?</p><h2>Drickläge</h2></div><RouterLink class="text-link" to="/drink">Visa alla <ArrowRight :size="16" aria-hidden="true" /></RouterLink></div>
       <div class="home-status-grid">
-        <RouterLink to="/cellar"><span class="status-symbol status-symbol--optimal" aria-hidden="true" /><strong>{{ statusCounts.ready }}</strong><span>kan drickas nu</span></RouterLink>
-        <RouterLink to="/cellar"><Clock3 :size="19" aria-hidden="true" /><strong>{{ statusCounts.soon }}</strong><span>drick snart</span></RouterLink>
-        <RouterLink to="/cellar"><span class="status-symbol status-symbol--wait" aria-hidden="true" /><strong>{{ statusCounts.waiting }}</strong><span>bör vänta</span></RouterLink>
+        <RouterLink :to="{ path: '/drink', query: { status: 'DRINK_SOON' } }"><Clock3 :size="19" aria-hidden="true" /><strong>{{ statusCounts.DRINK_SOON }}</strong><span>drick snart</span></RouterLink>
+        <RouterLink :to="{ path: '/drink', query: { status: 'DRINK_NOW' } }"><span class="status-symbol status-symbol--optimal" aria-hidden="true" /><strong>{{ statusCounts.DRINK_NOW }}</strong><span>drick nu</span></RouterLink>
+        <RouterLink :to="{ path: '/drink', query: { status: 'WAIT' } }"><span class="status-symbol status-symbol--wait" aria-hidden="true" /><strong>{{ statusCounts.WAIT }}</strong><span>vänta</span></RouterLink>
       </div>
     </section>
 

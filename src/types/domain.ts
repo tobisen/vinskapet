@@ -10,7 +10,8 @@ export type WineType =
 
 export type WineStatus = 'COLLECTION' | 'WISHLIST' | 'WATCHING' | 'HISTORY_ONLY'
 export type StorageLocation = 'WINE_FRIDGE' | 'ROOM_STORAGE' | 'OTHER'
-export type DrinkingStatus = 'WAIT' | 'CAN_DRINK' | 'OPTIMAL' | 'DRINK_SOON' | 'PAST_WINDOW'
+export type DrinkingStatus = 'WAIT' | 'CAN_DRINK' | 'OPTIMAL' | 'DRINK_SOON' | 'PAST_WINDOW' | 'UNKNOWN'
+export type DrinkClassification = 'DRINK_SOON' | 'DRINK_NOW' | 'CAN_DRINK' | 'WAIT' | 'UNKNOWN'
 export type MaturityAssessment = 'TOO_YOUNG' | 'GOOD_NOW' | 'PERFECT' | 'DECLINING'
 export type BuyAgain = 'YES' | 'MAYBE' | 'NO'
 export type Currency = 'SEK' | 'EUR'
@@ -96,6 +97,12 @@ export interface WineSummary extends Wine {
   latestPurchaseDate?: string
   storageLocations: StorageLocation[]
   tastingCount: number
+}
+
+export interface DrinkingRecommendation {
+  wine: WineSummary
+  classification: DrinkClassification
+  explanation: string
 }
 
 export interface WineFilters {

@@ -12,6 +12,11 @@ import type {
   WineType,
 } from "@/types/domain";
 import {
+  buildDrinkingRecommendations,
+  classifyWineForDrinking,
+  countDrinkingBottles,
+} from "@/domain/drinking";
+import {
   getWinePlaceholderVariant,
   normalizeWineImageUrl,
 } from "@/utils/wineImage";
@@ -33,6 +38,7 @@ export const drinkingStatusLabels: Record<DrinkingStatus, string> = {
   OPTIMAL: "Optimal nu",
   DRINK_SOON: "Drick snart",
   PAST_WINDOW: "Passerat fönster",
+  UNKNOWN: "Okänt",
 };
 
 export const storageLocationLabels: Record<StorageLocation, string> = {
@@ -45,24 +51,14 @@ export function getDrinkingStatus(
   wine: Wine,
   currentDate = new Date(),
 ): DrinkingStatus {
-  const year = currentDate.getFullYear();
-  const start = wine.drinkingWindowStart;
-  const end = wine.drinkingWindowEnd;
-  const optimalStart = wine.optimalDrinkingStart;
-  const optimalEnd = wine.optimalDrinkingEnd;
-
-  if (start != null && year < start) return "WAIT";
-  if (end != null && year > end) return "PAST_WINDOW";
-  if (
-    optimalStart != null &&
-    optimalEnd != null &&
-    year >= optimalStart &&
-    year <= optimalEnd
-  ) {
-    return "OPTIMAL";
+  const recommendation = classifyWineForDrinking(wine, currentDate);
+  if (recommendation.classification === "DRINK_SOON") {
+    return wine.drinkingWindowEnd != null && currentDate.getFullYear() > wine.drinkingWindowEnd
+      ? "PAST_WINDOW"
+      : "DRINK_SOON";
   }
-  if (end != null && year >= end - 1) return "DRINK_SOON";
-  return "CAN_DRINK";
+  if (recommendation.classification === "DRINK_NOW") return "OPTIMAL";
+  return recommendation.classification;
 }
 
 export function getStorageRecommendation(
@@ -81,46 +77,20 @@ export function getDrinkingGuidance(
   wine: Wine,
   currentDate = new Date(),
 ): string {
-  const year = currentDate.getFullYear();
-  const {
-    optimalDrinkingStart: optimalStart,
-    optimalDrinkingEnd: optimalEnd,
-    drinkingWindowStart,
-    drinkingWindowEnd,
-  } = wine;
-  if (optimalStart != null && year < optimalStart) {
-    if (drinkingWindowStart == null || year >= drinkingWindowStart)
-      return `Kan drickas nu. Bedömd optimal period börjar ${optimalStart}.`;
-    return `Bedömd drickperiod börjar ${drinkingWindowStart}. Optimal period börjar ${optimalStart}.`;
-  }
-  if (
-    optimalStart != null &&
-    optimalEnd != null &&
-    year >= optimalStart &&
-    year <= optimalEnd
-  ) {
-    return "Vinet är inom sin bedömda optimala period.";
-  }
-  if (drinkingWindowEnd != null && year >= drinkingWindowEnd - 1) {
-    return "Prioritera gärna denna flaska inom drickfönstret.";
-  }
-  return "";
+  return classifyWineForDrinking(wine, currentDate).explanation;
 }
 
 export function calculateDrinkingPlan(
   wines: WineSummary[],
   currentDate = new Date(),
 ) {
-  const counts = { ready: 0, soon: 0, waiting: 0 };
-  for (const wine of wines) {
-    const status = getDrinkingStatus(wine, currentDate);
-    if (status === "CAN_DRINK" || status === "OPTIMAL")
-      counts.ready += wine.quantity;
-    if (status === "DRINK_SOON" || status === "PAST_WINDOW")
-      counts.soon += wine.quantity;
-    if (status === "WAIT") counts.waiting += wine.quantity;
-  }
-  return counts;
+  const counts = countDrinkingBottles(buildDrinkingRecommendations(wines, currentDate));
+  return {
+    ready: counts.DRINK_NOW + counts.CAN_DRINK,
+    soon: counts.DRINK_SOON,
+    waiting: counts.WAIT,
+    unknown: counts.UNKNOWN,
+  };
 }
 
 export const calculateBottleCount = (inventory: Inventory[]): number =>
@@ -231,6 +201,7 @@ const priority: Record<DrinkingStatus, number> = {
   OPTIMAL: 2,
   CAN_DRINK: 3,
   WAIT: 4,
+  UNKNOWN: 5,
 };
 
 export function sortWines(

@@ -814,6 +814,146 @@ p {
   color: #24513e;
   background: #deeee6;
 }
+.status-unknown {
+  color: #625d60;
+  background: #eceaeb;
+}
+
+.drink-planner-page > .back-link {
+  margin-bottom: 22px;
+}
+.drink-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 -16px 28px;
+  padding: 0 16px 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.drink-tabs a {
+  display: grid;
+  min-width: 106px;
+  gap: 2px;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.drink-tabs a.selected {
+  color: #fff;
+  background: var(--wine);
+  border-color: var(--wine);
+}
+.drink-tabs strong {
+  font-size: 1.12rem;
+}
+.drink-tabs span {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.drink-results > .group-heading {
+  margin-bottom: 12px;
+}
+.drink-recommendation-list {
+  display: grid;
+  gap: 10px;
+}
+.drink-recommendation {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 20px;
+  min-height: 178px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.drink-recommendation > svg {
+  color: #9f9799;
+}
+.drink-recommendation__image {
+  display: grid;
+  min-width: 0;
+  align-self: stretch;
+  place-items: center;
+}
+.drink-recommendation__content {
+  min-width: 0;
+}
+.drink-recommendation__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.drink-recommendation__content > p {
+  margin: 0 0 2px;
+  color: var(--wine);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.drink-recommendation__content h2 {
+  margin: 0 0 9px;
+  font-size: 1rem;
+}
+.drink-recommendation__periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 9px;
+}
+.drink-recommendation__periods div {
+  display: grid;
+  gap: 1px;
+}
+.drink-recommendation__periods dt {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+.drink-recommendation__periods dd {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.drink-recommendation__reason {
+  display: block;
+  color: #3f514a;
+  font-size: 0.76rem;
+}
+.drink-classification {
+  display: inline-flex;
+  padding: 4px 6px;
+  color: #2d5546;
+  background: #e6f0eb;
+  border-radius: 4px;
+  font-size: 0.64rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.drink-classification--drink_soon {
+  color: #7d381e;
+  background: #f8e9df;
+}
+.drink-classification--wait {
+  color: #5d5870;
+  background: #eeedf4;
+}
+.drink-classification--unknown {
+  color: #625d60;
+  background: #eceaeb;
+}
+.drink-empty {
+  margin-block: 42px;
+}
 
 .metric-grid {
   display: grid;
@@ -2121,6 +2261,13 @@ p {
   .wishlist-entry {
     border: 0;
   }
+  .drink-tabs {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  .drink-recommendation-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 699px) {
@@ -2218,10 +2365,13 @@ p {
 }
 .wine-image img {
   display: block;
-  width: 100%;
-  height: 100%;
-  padding: 6px;
-  object-fit: contain;
+  width: calc(100% - 10px);
+  height: calc(100% - 8px);
+  object-fit: scale-down;
+  object-position: 50% 100%;
+  background: #fff;
+}
+.wine-image--loaded {
   background: #fff;
 }
 .wine-image--sm {

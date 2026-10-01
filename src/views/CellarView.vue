@@ -3,14 +3,17 @@ import { computed } from 'vue'
 import { Clock3, Snowflake, Wine } from '@lucide/vue'
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
-import { getDrinkingPeriod, getDrinkingStatus, getStorageRecommendation } from '@/utils/wine'
+import { buildDrinkingRecommendations, countDrinkingBottles } from '@/domain/drinking'
+import { getDrinkingPeriod } from '@/utils/wine'
 
 const store = useWineStore()
 const periods = ['Drick nu', '2027–2029', '2030–2034', '2035+']
 const grouped = computed(() => new Map(periods.map((period) => [period, store.inStock.value.filter((wine) => getDrinkingPeriod(wine) === period)])))
-const ready = computed(() => store.inStock.value.filter((wine) => ['CAN_DRINK', 'OPTIMAL', 'DRINK_SOON', 'PAST_WINDOW'].includes(getDrinkingStatus(wine))).reduce((sum, wine) => sum + wine.quantity, 0))
-const soon = computed(() => store.inStock.value.filter((wine) => ['DRINK_SOON', 'PAST_WINDOW'].includes(getDrinkingStatus(wine))).reduce((sum, wine) => sum + wine.quantity, 0))
-const cellarPriority = computed(() => store.inStock.value.filter((wine) => getStorageRecommendation(wine).includes('vinskåp')).reduce((sum, wine) => sum + wine.quantity, 0))
+const recommendations = computed(() => buildDrinkingRecommendations(store.inStock.value))
+const counts = computed(() => countDrinkingBottles(recommendations.value))
+const ready = computed(() => counts.value.DRINK_SOON + counts.value.DRINK_NOW + counts.value.CAN_DRINK)
+const soon = computed(() => counts.value.DRINK_SOON)
+const cellarPriority = computed(() => counts.value.WAIT)
 </script>
 
 <template>

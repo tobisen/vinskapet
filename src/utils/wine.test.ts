@@ -37,9 +37,9 @@ describe('drinking status', () => {
   })
 
   it('provides neutral guidance from the assessed windows', () => {
-    expect(getDrinkingGuidance(barbaresco, new Date('2027-06-01'))).toBe('Kan drickas nu. Bedömd optimal period börjar 2029.')
-    expect(getDrinkingGuidance(barbaresco, new Date('2030-06-01'))).toBe('Vinet är inom sin bedömda optimala period.')
-    expect(getDrinkingGuidance(barbaresco, new Date('2035-06-01'))).toBe('Prioritera gärna denna flaska inom drickfönstret.')
+    expect(getDrinkingGuidance(barbaresco, new Date('2027-06-01'))).toBe('Kan drickas nu. Optimal från 2029')
+    expect(getDrinkingGuidance(barbaresco, new Date('2030-06-01'))).toBe('Optimal period 2029–2033')
+    expect(getDrinkingGuidance(barbaresco, new Date('2035-06-01'))).toBe('Drickfönstret närmar sig slutet')
   })
 
   it('classifies the cellar by optimal start before the wider drinking window', () => {
@@ -67,7 +67,7 @@ describe('collection calculations', () => {
   it('counts every in-stock bottle once in the drinking plan', () => {
     const inStock = summaries.filter((wine) => wine.quantity > 0)
     const plan = calculateDrinkingPlan(inStock, new Date('2026-06-01'))
-    expect(plan.ready + plan.soon + plan.waiting).toBe(inStock.reduce((sum, wine) => sum + wine.quantity, 0))
+    expect(plan.ready + plan.soon + plan.waiting + plan.unknown).toBe(inStock.reduce((sum, wine) => sum + wine.quantity, 0))
   })
 
   it('sums multiple purchase rows for the same wine', () => {

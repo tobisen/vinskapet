@@ -9,7 +9,22 @@ export function isAllowedImageUrl(value?: string): value is string {
 
 export function normalizeWineImageUrl(value?: string): string | undefined {
   if (!isAllowedImageUrl(value)) return undefined;
-  return value.trim();
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname === "product-cdn.systembolaget.se") {
+      const match = url.pathname.match(/^(.*\/)(\d+)(?:_\d+)?(?:\.[a-z]+)?$/i);
+      if (match) {
+        url.pathname = `${match[1]}${match[2]}_400.png`;
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return trimmed;
 }
 
 export function getWinePlaceholderVariant(wineType?: WineType): string {

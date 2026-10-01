@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { WineType } from "@/types/domain";
+import { normalizeWineImageUrl } from "@/utils/wineImage";
 
 const props = withDefaults(
   defineProps<{
@@ -26,7 +27,7 @@ watch(
 );
 
 const normalizedSrc = computed(() =>
-  props.src && !hasError.value ? props.src : undefined,
+  props.src && !hasError.value ? normalizeWineImageUrl(props.src) : undefined,
 );
 
 const placeholderLabel = computed(() => {
@@ -50,6 +51,7 @@ const placeholderLabel = computed(() => {
     :class="[
       `wine-image--${size}`,
       `wine-image--${(wineType ?? 'RED').toLowerCase()}`,
+      { 'wine-image--loaded': normalizedSrc },
     ]"
   >
     <img

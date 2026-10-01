@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ShoppingBag, Trash2 } from '@lucide/vue'
+import { Pencil, ShoppingBag, Trash2 } from '@lucide/vue'
 import InventoryForm from '@/components/InventoryForm.vue'
 import ModalShell from '@/components/ModalShell.vue'
 import QuantityStepper from '@/components/QuantityStepper.vue'
@@ -43,6 +43,7 @@ async function updateWishlistQuantity(wine: WineSummary, quantity: number): Prom
         />
         <div class="wishlist-actions">
           <button class="button button-primary" type="button" @click="purchasing = wine"><ShoppingBag :size="18" aria-hidden="true" /> Jag har köpt det</button>
+          <RouterLink class="icon-button" :to="`/wine/${wine.id}/edit`" aria-label="Redigera vininfo" title="Redigera vininfo"><Pencil :size="18" aria-hidden="true" /></RouterLink>
           <button class="icon-button" type="button" :disabled="store.isSaving.value" aria-label="Ta bort från önskelistan" title="Ta bort från önskelistan" @click="remove(wine.id)"><Trash2 :size="19" aria-hidden="true" /></button>
         </div>
       </article>
