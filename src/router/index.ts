@@ -10,6 +10,7 @@ import WineFormView from '@/views/WineFormView.vue'
 import WineSearchView from '@/views/WineSearchView.vue'
 import WishlistView from '@/views/WishlistView.vue'
 import DrinkPlannerView from '@/views/DrinkPlannerView.vue'
+import FoodPairingView from '@/views/FoodPairingView.vue'
 import { initializeAuth, useAuth } from '@/composables/useAuth'
 
 export const router = createRouter({
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: '/collection', component: CollectionView, meta: { requiresAuth: true } },
     { path: '/cellar', component: CellarView, meta: { requiresAuth: true } },
     { path: '/drink', component: DrinkPlannerView, meta: { requiresAuth: true } },
+    { path: '/food', component: FoodPairingView, meta: { requiresAuth: true } },
     { path: '/wishlist', component: WishlistView, meta: { requiresAuth: true } },
     { path: '/history', component: HistoryView, meta: { requiresAuth: true } },
     { path: '/wine/new', component: AddWineView, meta: { requiresAuth: true } },

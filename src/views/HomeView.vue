@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowRight, CircleDollarSign, Clock3, GlassWater, LibraryBig, Plus, Sparkles } from '@lucide/vue'
+import { ArrowRight, CircleDollarSign, Clock3, GlassWater, LibraryBig, Plus, Sparkles, Utensils } from '@lucide/vue'
 import WineCard from '@/components/WineCard.vue'
 import { useWineStore } from '@/composables/useWineStore'
 import { buildDrinkingRecommendations, countDrinkingBottles } from '@/domain/drinking'
@@ -36,6 +36,7 @@ const drinkNow = computed(() =>
 
     <section class="home-actions" aria-label="Snabbval">
       <RouterLink to="/drink"><GlassWater :size="22" aria-hidden="true" /><span><strong>Välj vin för kvällen</strong><small>Se vad som är redo</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
+      <RouterLink to="/food"><Utensils :size="22" aria-hidden="true" /><span><strong>Vin till mat</strong><small>Matcha maten med samlingen</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
       <RouterLink to="/wine/new"><Plus :size="22" aria-hidden="true" /><span><strong>Lägg till vin</strong><small>Registrera ett nytt inköp</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
       <RouterLink to="/collection"><LibraryBig :size="22" aria-hidden="true" /><span><strong>Öppna samlingen</strong><small>Sök, filtrera och sortera</small></span><ArrowRight :size="18" aria-hidden="true" /></RouterLink>
     </section>
